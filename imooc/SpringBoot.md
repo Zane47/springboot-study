@@ -193,6 +193,16 @@ pom文件修改Springboot版本2.2.1-RELEASE
 </build>
 ```
 
+# Web项目的三层结构
+
+Controller, Service, DAO
+
+* Controller: 对外暴露接口, 
+
+* Service: 在复杂业务场景下, 对业务逻辑做一层抽象,封装. 保持Controller层的简洁和独立. 抽象出来的Service层可以被多个Controller重复调用, 相当于实现代码复用. 具体的代码写在Service, Controller只写逻辑判断
+
+* DAO: 与数据相关的操作, CRUD
+
 # Controller Demo
 
 ## 简单请求
@@ -284,6 +294,163 @@ public class ParamController {}
 `http://127.0.0.1:8080/required` : 打印默认值0
 
 `http://127.0.0.1:8080/required?num=1`: 打印传入的参数值
+
+# 配置文件简介
+
+application.properties
+
+两种写法: properties和yml
+
+## properties写法
+
+* 配置端口:
+
+```properties
+server.port=8081
+```
+浏览器访问: `http://127.0.0.1:8081/required?num=33`
+
+* 项目的统一前缀
+
+给整个项目建立统一前缀, 这是在庞大项目中必须要用的属性. 两个项目例如电商和教育, 可能有部分功能重叠, 例如用户, 如果不加统一前缀, 可能url会冲突
+
+```properties
+server.servlet.context-path=/first
+```
+
+浏览器访问: `http://127.0.0.1:8081/first/required?num=33`
+
+## yml写法
+
+yml写法分层级, 冒号后需要有空格
+
+```
+* properties:
+environments.dev.url=http://imooc.com
+environments.dev.name=Developer
+
+* yml：分层级，冒号后需要空格
+environments:
+	dev:
+		url: http://imooc.com
+		name: Developer
+```
+
+两者可以自由转换, [工具网址](https://toyaml.com/index.html)
+
+<img src="img/SpringBoot/image-20220105175120322.png" alt="image-20220105175120322" style="zoom:67%;" />
+
+推荐使用工具转换 
+
+## 配置自定义属性
+
+### 使用配置文件
+
+自定义属性写在配置文件中, 不在代码中写死.
+
+使用@Value注解
+
+```properties
+school.grade=3
+school.classnum=6
+```
+
+```java
+package com.example.springbootlearn;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 演示读取配置
+ */
+@RestController
+public class PropertiesController {
+
+    @Value("${school.grade}")
+    private Integer grade;
+
+    @Value("${school.classnum}")
+    private Integer classNum;
+
+    /**
+     * 获取年级和班级, 不通过传参, 而是通过配置
+     */
+    @GetMapping("/gradeclass")
+    public String gradeClass() {
+        return grade + "-" + classNum;
+    }
+}
+```
+
+---
+
+还是不够方便, 因为在书写@Value注解的时候, ide没有提示, 容易写错
+
+使用对象的方式进行配置
+
+### 使用配置类与配置文件
+
+**注意config类中一定要生成getter, setter方法spring才会注入值**
+
+1. 新建config类
+
+```java
+package com.example.springbootlearn;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+@Getter
+@Setter
+@Component
+@ConfigurationProperties(prefix = "school")
+public class SchoolConfig {
+    Integer grade;
+    Integer classnum;
+    Integer test;
+}
+```
+
+2. Controller中使用
+
+```java
+package com.example.springbootlearn;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import javax.annotation.Resource;
+
+@RestController
+public class SchoolController {
+
+    @Resource
+    // @Autowired
+    private SchoolConfig schoolConfig;
+
+    @GetMapping("/gradefromconfig")
+    public String gradeClass() {
+        return schoolConfig.grade + "-" + schoolConfig.classnum + "-" + schoolConfig.test;
+    }
+}
+```
+
+3. 运行
+
+![image-20220105182345549](img/SpringBoot/image-20220105182345549.png)
+
+可见在配置文件中的属性输出了
+
+---
+
+如果配置简单, 可以直接使用配置文件, @Value注解.
+
+如果配置类, 在其中定义属性, 同时务必写getter和setter方法 
+
+# Service和DAO的编写
+
+学生信息查询案例
 
 
 
