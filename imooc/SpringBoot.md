@@ -501,17 +501,92 @@ spring.datasource.url=\
 
 此处驱动可以改成MySQL 8对应的com.mysql.cj.jdbc.Driver
 
+4. 新增student实体类
 
+```java
+package com.example.springbootlearn.student.entity;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
+@Getter
+@Setter
+@ToString
+public class Student {
+    private Integer id;
+    private String name;
+}
+```
 
+5. Mapper接口
 
+```java
+package com.example.springbootlearn.student.mapper;
 
+import com.example.springbootlearn.student.entity.Student;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+import org.springframework.stereotype.Repository;
 
+@Mapper
+@Repository
+public interface StudentMapper {
 
+    @Select("select * from students where id = #{id}")
+    Student findById(Integer id);
+}
+```
 
+6. Service查询数据
 
+```java
+package com.example.springbootlearn.student.service;
 
+import com.example.springbootlearn.student.entity.Student;
+import com.example.springbootlearn.student.mapper.StudentMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class StudentService {
+
+    @Autowired
+    private StudentMapper studentMapper;
+
+    public Student findStudentById(Integer id) {
+        return studentMapper.findById(id);
+    }
+}
+```
+
+7. Controller调用接口, 返回数据
+
+```java
+package com.example.springbootlearn.student.controller;
+
+import com.example.springbootlearn.student.service.StudentService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class StudentController {
+
+    @Autowired
+    private StudentService studentService;
+
+    @GetMapping("/student")
+    public String student(@RequestParam Integer id) {
+        return studentService.findStudentById(id).toString();
+    }
+}
+```
+
+浏览器访问: `http://127.0.0.1:8080/student?id=1`
+
+返回数据
 
 
 
