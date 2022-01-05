@@ -450,7 +450,55 @@ public class SchoolController {
 
 # Service和DAO的编写
 
-学生信息查询案例
+学生信息查询案例. 数据库中数据
+
+1. 数据库中新建students表
+
+```mysql
+create table students (
+  `id` int(11) unsigned not null AUTO_INCREMENT COMMENT '自增id',
+  `name` varchar(256) not null default '' COMMENT '姓名',
+  primary key (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+```
+
+添加一些数据
+
+2. 添加依赖
+
+添加MyBatis
+
+```xml
+<!-- mybatis -->
+<dependency>
+    <groupId>org.mybatis.spring.boot</groupId>
+    <artifactId>mybatis-spring-boot-starter</artifactId>
+    <version>2.1.1</version>
+</dependency>
+```
+
+添加mysql链接依赖
+
+```xml
+<!-- mysql -->
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+</dependency>
+```
+
+3. 添加配置application.properties中
+
+```properties
+# mysql驱动依赖,此处驱动可以改成MySQL 8对应的com.mysql.cj.jdbc.Driver
+spring.datasource.driver-class-name=com.mysql.jdbc.Driver
+spring.datasource.username=root
+spring.datasource.password=12345678
+spring.datasource.url=jdbc:mysql://114.55.64.149:3318
+/springbootlearn?serverTimezon=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true
+```
+
+此处驱动可以改成MySQL 8对应的com.mysql.cj.jdbc.Driver
 
 
 
