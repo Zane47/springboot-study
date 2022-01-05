@@ -493,9 +493,10 @@ create table students (
 # mysql驱动依赖,此处驱动可以改成MySQL 8对应的com.mysql.cj.jdbc.Driver
 spring.datasource.driver-class-name=com.mysql.jdbc.Driver
 spring.datasource.username=root
-spring.datasource.password=12345678
-spring.datasource.url=jdbc:mysql://114.55.64.149:3318
-/springbootlearn?serverTimezon=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true
+spring.datasource.password=
+spring.datasource.url=\
+  jdbc:mysql://114.55.64.149:3318/\
+  springbootlearn?serverTimezon=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=true
 ```
 
 此处驱动可以改成MySQL 8对应的com.mysql.cj.jdbc.Driver
