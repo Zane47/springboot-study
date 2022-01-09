@@ -242,6 +242,20 @@ public String requestParam(@RequestParam Integer num) {
 
 浏览器访问:`http://127.0.0.1:8080/requestparam?num=1`
 
+---
+
+或者不使用注解@RequestParam, 注意要与函数签名一致
+
+````java
+@GetMapping("/price")
+public Float getCoursePrice(Integer courseId) {
+    final CoursePrice coursePrice = coursePriceService.getCoursePrice(courseId);
+    return coursePrice.getPrice();
+}
+````
+
+`http://localhost:8082/price?courseId=364`
+
 ## 参数写到url中
 
 使用@PathVariable, 同时注意@GetMapping中的参数
