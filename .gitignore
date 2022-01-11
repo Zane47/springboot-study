@@ -2,3 +2,6 @@
 /atguigu/boot01-helloworld/target
 /atguigu/boot-RESTful-greeting/.idea
 /atguigu/boot-RESTful-greeting/target
+.idea
+*.iml
+target
