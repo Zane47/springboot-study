@@ -172,11 +172,308 @@ api不应该直接调用mapper, 应该通过service去操作数据
 * deploy命令完成了项目编译、单元测试、打包功能，同时把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库和远程maven私服仓库
   
 
-
-
 ## 设计数据库
 
-PDMan
+[PDMan](http://www.pdman.cn/#/), 元数据建模工具. foodie-dev.pdman.json. 项目: foodie-dev.pdman.json
+
+增量同步: 修改表
+
+全量同步: drop旧表, 新建新表
+
+---
+
+数据库外键:
+
+* 性能影响. 三范式. -> 移除物理外键
+* 热更新. 分布式场景下, 项目绝大多数情况下进行热更新, 不停机维护. 外键可能导致新更新的无法运行, 需要重启服务器. 外键强依赖性
+* 降低耦合度. 删除外键并不是真的全都删除, 而是删除物理外键, 物理的一层关系不需要了. 
+  * 物理和逻辑. 逻辑: 用户地址和用户表, userId为外键, 关联两张表, 不需要设置物理外键, 依赖关系还是存在的
+
+* 数据分库分表. 外键关联难以做分库分表, 
+
+## 聚合工程整合
+
+启动springboot
+
+### 在根项目的pom中引入
+
+1. 引入依赖parent
+
+```xml
+<parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot</artifactId>
+    <version>2.1.5.RELEASE</version>
+    <relativePath/>
+</parent>
+```
+
+2. 设置资源属性
+
+```xml
+<properties>
+    <maven.compiler.source>8</maven.compiler.source>
+    <maven.compiler.target>8</maven.compiler.target>
+
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <java.version>1.8</java.version>
+</properties>
+```
+
+3. 引入依赖
+
+````xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+        <exclusions>
+            <exclusion>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-logging</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    
+	<!-- 默认解析yml, 引入该依赖可以解析其他格式的配置文件 -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-configuration-processor</artifactId>
+        <optional>true</optional>
+    </dependency>
+</dependencies>
+````
+
+这里不需要写版本是因为在``<parent>``的依赖中的
+
+```xml
+<parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-dependencies</artifactId>
+    <version>2.1.5.RELEASE</version>
+    <relativePath>../../spring-boot-dependencies</relativePath>
+</parent>
+```
+
+其中的spring-boot-dependencies中已经声明了依赖
+
+![image-20220111223106695](img/foodie-study/image-20220111223106695.png)
+
+### foodie-dev-api 101
+
+创建yml配置文件
+
+* foodie-dev-api中
+
+1.resources新增配置文件application.yml
+
+2.新增启动类
+
+```java
+package com.imooc;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+```
+
+3. 新增controller, hello程序
+
+```java
+package com.imooc.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HelloController {
+
+    @GetMapping("/hello")
+    public Object hello() {
+        return "hello world";
+    }
+}
+```
+
+## Spring Boot自动装配
+
+
+
+
+
+
+
+# 数据层
+
+## HikariCP数据源简述
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 事务的传播
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 注册与登陆
+
+## 用户注册
+
+
+
+
+
+
+
+
+
+
+
+## 基于Swagger2的API文档
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 前后端联调
+
+### tomcat运行前端
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 前后端联调
+
+设置跨域配置实现前后端联调
+
+
+
+
+
+
+
+
+
+## 登陆
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 分类实现
+
+
+
+
+
+
+
+
+
+# 商品推荐
+
+
+
+
+
+
+
+# 搜索
+
+
+
+
+
+# 商品评价
 
 
 
