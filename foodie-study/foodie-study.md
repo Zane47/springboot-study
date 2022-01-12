@@ -816,6 +816,23 @@ DELETE -> /order/{id} -> deleteOrder?id=1001
 
 
 
+![image-20220112223911969](img/foodie-study/image-20220112223911969.png)
+
+
+
+
+
+
+
+save接口, 暂时不保证幂等性 -> 后续课程
+
+
+
+
+
+
+
+### postman测试Restful接口
 
 
 
@@ -833,8 +850,7 @@ DELETE -> /order/{id} -> deleteOrder?id=1001
 
 
 
-
-## 事务的传播
+## 事务的传播propagation
 
 
 

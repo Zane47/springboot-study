@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.swing.*;
+
 @Service
 public class StuServiceImpl implements StuService {
 
@@ -21,19 +23,31 @@ public class StuServiceImpl implements StuService {
         return stuMapper.selectByPrimaryKey(id);
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
     @Override
     public void saveStu() {
-
+        Stu stu = new Stu();
+        stu.setName("jack");
+        stu.setAge(19);
+        stuMapper.insert(stu);
     }
 
+
+    @Transactional(propagation = Propagation.REQUIRED)
     @Override
     public void updateStu(Integer id) {
-
+        Stu stu = new Stu();
+        stu.setId(id);
+        stu.setName("lucy");
+        stu.setAge(20);
+        stuMapper.updateByPrimaryKey(stu);
     }
 
+
+    @Transactional(propagation = Propagation.REQUIRED)
     @Override
     public void deleteStu(Integer id) {
-
+        stuMapper.deleteByPrimaryKey(id);
     }
 
     @Override
