@@ -117,6 +117,10 @@ entity
 
 4. 添加数据层子项目foodie-dev-mapper
 
+数据层中对应生成接口, 与mapper.xml做映射一一对应.
+
+在resources下新建mapper文件夹, 其中的xml文件与数据库一一对应 -> 数据层foodie-dev-api的application.yml中配置数据源和mybatis
+
 mapper中依赖pojo, 同时注意, 因为pojo依赖common. 所以mapper可以通过pojo使用common中对应方法
 
 ```xml
@@ -166,11 +170,14 @@ api不应该直接调用mapper, 应该通过service去操作数据
 ---
 
 * package命令完成了项目编译、单元测试、打包功能，但没有把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库和远程maven私服仓库
-
 * install命令完成了项目编译、单元测试、打包功能，同时把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库，但没有布署到远程maven私服仓库
-
 * deploy命令完成了项目编译、单元测试、打包功能，同时把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库和远程maven私服仓库
-  
+
+## 修改启动项目前务必install
+
+修改代码后需要在foodie-dev中重新install. 类比汽车零件修改后要重新安装
+
+![image-20220112103334500](img/foodie-study/image-20220112103334500.png)
 
 ## 设计数据库
 
@@ -307,17 +314,467 @@ public class HelloController {
 }
 ```
 
-## Spring Boot自动装配
 
 
 
+# 面试题: Spring Boot自动装配, 如何启动内置Tomcat的?
+
+1. 跟踪源代码, 查看SpringApplication.run方法源代码
+
+```java
+/**
+	 * Static helper that can be used to run a {@link SpringApplication} from the
+	 * specified source using default settings.
+	 * @param primarySource the primary source to load
+	 * @param args the application arguments (usually passed from a Java main method)
+	 * @return the running {@link ApplicationContext}
+	 */
+public static ConfigurableApplicationContext run(Class<?> primarySource,
+                                                 String... args) {
+    return run(new Class<?>[] { primarySource }, args);
+}
+```
+
+primarySource就是要加载的source.
+
+其中提到`using default settings`, 这里的默认配置是在注解@SpringBootApplication中的
+
+最后返回一个`running ApplicationContext`
+
+2. 查看@SpringBootApplication注解
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan(excludeFilters = {
+		@Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+		@Filter(type = FilterType.CUSTOM,
+				classes = AutoConfigurationExcludeFilter.class) })
+public @interface SpringBootApplication {}
+```
+
+重点是@SpringBootConfiguration, @EnableAutoConfiguration, @ComponentScan
+
+* @ComponentScan扫描, 默认是在当前包和子包中的类, 例如这的Application所在的com.imooc包下的子包controller中的@RESTController就被加载到了容器中
+
+* SpringBootConfiguration
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Configuration
+public @interface SpringBootConfiguration {}
+```
+
+其中的@Configuration注解 -> 就是一个容器, 类似Spring中写xml配置的beans包含了一个个bean, IOC容器
+
+* @EnableAutoConfiguration
+
+用来开启自动装配
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@AutoConfigurationPackage
+@Import(AutoConfigurationImportSelector.class)
+public @interface EnableAutoConfiguration {}
+```
+
+其中的@Import
+
+```java
+Indicates one or more {@link Configuration @Configuration} classes to import.
+```
+
+AutoConfigurationImportSelector.class, 自动装配导入的选择器
+
+```java
+@Override
+public String[] selectImports(AnnotationMetadata annotationMetadata) {
+    if (!isEnabled(annotationMetadata)) {
+        return NO_IMPORTS;
+    }
+    AutoConfigurationMetadata autoConfigurationMetadata = AutoConfigurationMetadataLoader
+        .loadMetadata(this.beanClassLoader);
+    AutoConfigurationEntry autoConfigurationEntry = getAutoConfigurationEntry(
+        autoConfigurationMetadata, annotationMetadata);
+    return StringUtils.toStringArray(autoConfigurationEntry.getConfigurations());
+}
+```
+
+选择要导入的类, 其中的getAutoConfigurationEntry:
+
+```java
+protected AutoConfigurationEntry getAutoConfigurationEntry(
+    AutoConfigurationMetadata autoConfigurationMetadata,
+    AnnotationMetadata annotationMetadata) {
+    if (!isEnabled(annotationMetadata)) {
+        return EMPTY_ENTRY;
+    }
+    AnnotationAttributes attributes = getAttributes(annotationMetadata);
+    List<String> configurations = getCandidateConfigurations(annotationMetadata,
+                                                             attributes);
+    configurations = removeDuplicates(configurations);
+    Set<String> exclusions = getExclusions(annotationMetadata, attributes);
+    checkExcludedClasses(configurations, exclusions);
+    configurations.removeAll(exclusions);
+    configurations = filter(configurations, autoConfigurationMetadata);
+    fireAutoConfigurationImportEvents(configurations, exclusions);
+    return new AutoConfigurationEntry(configurations, exclusions);
+}
+```
+
+关注其中的`List<String> configurations`, 就是配置. 再看其中的getCandidateConfigurations方法
+
+```java
+protected List<String> getCandidateConfigurations(AnnotationMetadata metadata,
+                                                  AnnotationAttributes attributes) {
+    List<String> configurations = SpringFactoriesLoader.loadFactoryNames(
+        getSpringFactoriesLoaderFactoryClass(), getBeanClassLoader());
+    Assert.notEmpty(configurations,
+                    "No auto configuration classes found in META-INF/spring.factories. If you "
+                    + "are using a custom packaging, make sure that file is correct.");
+    return configurations;
+}
+```
+
+![image-20220112092427153](img/foodie-study/image-20220112092427153.png)
+
+其中的spring.factories中就是自动装配的类
+
+```
+org.springframework.boot.autoconfigure.web.embedded.EmbeddedWebServerFactoryCustomizerAutoConfiguration,\
+```
+
+点击查看类
+
+```java
+@Configuration
+@ConditionalOnClass({ Tomcat.class, UpgradeProtocol.class })
+public static class TomcatWebServerFactoryCustomizerConfiguration {
+
+    @Bean
+    public TomcatWebServerFactoryCustomizer tomcatWebServerFactoryCustomizer(
+        Environment environment, ServerProperties serverProperties) {
+        return new TomcatWebServerFactoryCustomizer(environment, serverProperties);
+    }
+
+}
+```
+
+Tomcat.class: SpringBoot内置的tomcat, 点入看到, 默认端口8080, 默认hostname: localhost
+
+---
+
+```
+org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration,\
+```
+
+自动装配web mvc
+
+```java
+/**
+ * {@link EnableAutoConfiguration Auto-configuration} for {@link EnableWebMvc Web MVC}.
+ */
+```
+
+---
+```
+org.springframework.boot.autoconfigure.web.servlet.ServletWebServerFactoryAutoConfiguration,\
+```
+
+```java
+/**
+ * {@link EnableAutoConfiguration Auto-configuration} for servlet web servers. */
+```
+
+```java
+@Bean
+@ConditionalOnClass(name = "org.apache.catalina.startup.Tomcat")
+public TomcatServletWebServerFactoryCustomizer tomcatServletWebServerFactoryCustomizer(
+    ServerProperties serverProperties) {
+    return new TomcatServletWebServerFactoryCustomizer(serverProperties);
+}
+```
+
+运行Application, 内置的tomcat也随之启动
+
+在spring.factories中包含了许多自动转配的类
+
+---
+
+@SpringBootApplication -> @EnableAutoConfiguration ->  @Import(AutoConfigurationImportSelector.class) -> AutoConfigurationImportSelector.class -> selectImports -> getAutoConfigurationEntry -> getCandidateConfigurations -> loadFactoryNames
 
 
 
+```java
+/**
+	 * Load the fully qualified class names of factory implementations of the
+	 * given type from {@value #FACTORIES_RESOURCE_LOCATION}, using the given
+	 * class loader.
+	 * @param factoryClass the interface or abstract class representing the factory
+	 * @param classLoader the ClassLoader to use for loading resources; can be
+	 * {@code null} to use the default
+	 * @throws IllegalArgumentException if an error occurs while loading factory names
+	 * @see #loadFactories
+	 */
+public static List<String> loadFactoryNames(Class<?> factoryClass, @Nullable ClassLoader classLoader) {
+    String factoryClassName = factoryClass.getName();
+    return loadSpringFactories(classLoader).getOrDefault(factoryClassName, Collections.emptyList());
+}
+```
+
+其中:
+
+```java
+public static final String FACTORIES_RESOURCE_LOCATION = "META-INF/spring.factories";
+```
 
 # 数据层
 
-## HikariCP数据源简述
+foodie-shop-dev.sql -> mysql5.7 run sql script
+
+## HikariCP数据源
+
+### 简述
+
+HikariCP: SpringBoot2.x的默认数据源(默认数据库连接池). 速度快
+
+![img](https://github.com/brettwooldridge/HikariCP/wiki/HikariCP-bench-2.6.0.png)
+
+[为什么HikariCP快](https://github.com/brettwooldridge/HikariCP/wiki/Down-the-Rabbit-Hole)
+
+ali: Durid
+
+### 整合HikariCP
+
+数据层HikariCP与MyBatis整合
+
+1. pom中引入数据源驱动与mybatis依赖
+
+foodie-dev的pom中
+
+```xml
+<!-- 数据库驱动 -->
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>5.1.41</version>
+</dependency>
+
+<!-- mybatis -->
+<dependency>
+    <groupId>org.mybatis.spring.boot</groupId>
+    <artifactId>mybatis-spring-boot-starter</artifactId>
+    <version>2.1.0</version>
+</dependency>
+```
+
+2. foodie-dev-api的application.yml中配置数据源和mybatis
+
+```yaml
+############################################################
+#
+#
+# 配置数据源信息
+#
+############################################################
+spring:
+  datasource: # 数据源的相关配置
+    type: com.zaxxer.hikari.HikariDataSource   # 数据源类型: HikariCP
+    driver-class-name: com.mysql.jdbc.Driver   # mysql驱动
+    url: jdbc:mysql://114.55.64.149:3306/foodie-shop-dev?useUnicode=true&characterEncoding=UTF-8&autoReconnect
+    username: root
+    password:
+
+    hikari:
+      connection-timeout: 30000 # 等待连接池分配连接的最大时长(毫秒), 超过这个时长还没可用的连接则发生SQLException, 默认:30秒
+      minimum-idle: 5 # 最小连接数
+      maximum-pool-size: 20 # 最大连接数
+      auto-commit: true # 自动提交
+      idle-timeout: 600000 # 连接超时的最大时长(毫秒), 超时则被释放(retired),默认:10分钟
+      pool-name: DataSourceHikariCP # 连接池名称
+      max-lifetime: 1800000 # 连接的生命时长(毫秒),超时而且没被使用则被释放(retired), 默认:30分钟 1800000ms
+      connection-test-query: select 1
+
+
+############################################################
+#
+# mybatis 配置
+#
+############################################################
+mybatis:
+  type-aliases-package: com.imooc.pojo # 所有pojo类(entity)所在的包路径
+  mapper-locations: classpath:mapper/*.xml # mapper映射文件
+```
+
+其中在foodie-dev-pojo的java目录下新建包com.imooc.pojo以便扫描
+
+在foodie-dev-mapper的resources下新建mapper文件夹, 后续的文件就是放在xml下的
+
+classpath就是所有的resources
+
+todo: 为什么这里不同包下的文件可以配置到
+
+---
+
+内置tomcat配置:
+
+foodie-dev-api的application.yml中
+
+```yaml
+#
+# 内置tomcat, web访问端口号  约定：8088
+#
+############################################################
+server:
+  port: 8088
+  tomcat:
+    uri-encoding: UTF-8
+  max-http-header-size: 80KB
+```
+
+8080端口后续给静态资源服务器
+
+浏览器访问: `localhost:8088/hello`
+
+---
+
+hikari:
+      minimum-idle: 5 # 最小连接数
+      maximum-pool-size: 20 # 最大连接数
+
+默认最大连接数10. 最大连接数和服务器配置有关, 同时并不是越大越好. 四核->10, 八核->20
+
+作者的观点希望最大最小一致, 固定连接池大小, 系统一般不会出现闲置情况
+
+## MyBatis逆向生成工具
+
+生成Pojo, Mapper.xml, mapperxml对接接口映射类
+
+Mybatis-generator工具, 其中集成MyMapper工具
+
+<img src="img/foodie-study/image-20220112110327557.png" alt="image-20220112110327557" style="zoom: 67%;" />
+
+工具项目: mybatis-generator-for-imooc
+
+generatorConfig.xml文件中设置table
+
+```xml
+<table tableName="carousel"/>
+<table tableName="category"/>
+<table tableName="items"/>
+<table tableName="items_comments"/>
+<table tableName="items_img"/>
+<table tableName="items_param"/>
+<table tableName="items_spec"/>
+<table tableName="order_items"/>
+<table tableName="order_status"/>
+<table tableName="orders"/>
+<table tableName="user_address"/>
+<table tableName="users"/>
+```
+
+生成文件后拷贝到自己的项目中
+
+<img src="img/foodie-study/image-20220112112658556.png" alt="image-20220112112658556" style="zoom:50%;" />
+
+---
+
+使用工具
+
+1. 在根pom中添加通用mapper工具
+
+foodie-dev.pom中添加
+
+```xml
+<!-- 通用mapper逆向工具 -->
+<dependency>
+    <groupId>tk.mybatis</groupId>
+    <artifactId>mapper-spring-boot-starter</artifactId>
+    <version>2.1.5</version>
+</dependency>
+```
+
+2. 在yml中引入通用mapper配置
+
+在api层中, foodie-dev-api中添加
+
+```yaml
+############################################################
+#
+# mybatis mapper 配置
+#
+############################################################
+# 通用Mapper配置
+mapper:
+  mappers: com.imooc.my.mapper.MyMapper
+  not-empty: false # 在进行数据库操作的的时候，判断表达式 username != null, 是否追加 username != ''
+  identity: MYSQL
+```
+
+not-empty: 做更新等操作判断属性是否为空,  
+
+在进行数据库操作的的时候，判断表达式 username != null, 是否追加 username != ''
+
+建议自己手写, 不要依赖框架 
+
+
+3. 引入MyMapper接口类
+
+```java
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014-2016 abel533@gmail.com
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+package com.imooc.my.mapper;
+
+import tk.mybatis.mapper.common.Mapper;
+import tk.mybatis.mapper.common.MySqlMapper;
+
+/**
+ * 继承自己的MyMapper
+ */
+public interface MyMapper<T> extends Mapper<T>, MySqlMapper<T> {
+}
+```
+
+4. 验证
+
+maven install
+
+运行后访问/hello查看是否出错
+
+
+
+
 
 
 
@@ -338,6 +795,18 @@ public class HelloController {
 
 
 ## 事务的传播
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
