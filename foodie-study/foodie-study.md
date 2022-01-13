@@ -1557,7 +1557,7 @@ public class UserBO {
 
 #### Service
 
-接口中
+1. 接口中
 
 ```java
 /**
@@ -1566,21 +1566,67 @@ public class UserBO {
 public Users createUser(UserBO userBO);
 ```
 
-impl中
+2. impl中
 
 ```java
+// 默认头像
+private static final String DEFAULT_USER_FACE = "http://122.152.205.72:88/group1/M00/00/05/CpoxxFw_8_qAIlFXAAAcIhVPdSg994.png";
 
+
+@Autowired
+private Sid sid;
 ```
 
+```java
+/**
+     * 创建用户
+     *
+     * @param userBO 前台传入的业务对象
+     *
+     * @return Users
+     */
+@Transactional(propagation = Propagation.REQUIRED)
+@Override
+public Users createUser(UserBO userBO) {
+    Users user = new Users();
+
+    user.setId(sid.nextShort());
+
+    user.setUsername(userBO.getUserName());
+
+    try {
+        // 密码使用md5加密
+        user.setPassword(MD5Utils.getMD5Str(userBO.getPassword()));
+    } catch(Exception e) {
+        e.printStackTrace();
+    }
+
+    // 默认用户昵称同用户名
+    user.setNickname(userBO.getUserName());
+    user.setFace(DEFAULT_USER_FACE);
+    user.setSex(Sex.secret.type);
+    // 设置默认生日
+    user.setBirthday(DateUtil.stringToDate("1900-01-01"));
 
 
-userId, 
+    user.setCreatedTime(new Date());
+    user.setUpdatedTime(new Date());
 
-密码需要MD5加密, foodie-dev-common中添加MD5Utils
+    usersMapper.insert(user);
 
-生日使用日期处理工具类, foodie-dev-common中添加DateUtil
+    return user;
+}
+```
 
-性别的枚举类, foodie-dev-common中添加Sex
+* userId, 主键, 全局唯一. -> 后续讲解全局唯一的多种方式
+
+这里直接使用组件idworker中的工具类Sid, 有些类似腾讯新闻中生成id的格式
+
+* 密码需要MD5加密, foodie-dev-common中添加MD5Utils
+
+* 生日使用日期处理工具类, foodie-dev-common中添加DateUtil
+
+* 性别的枚举类, foodie-dev-common中添加Sex
 
 ```java
 package com.imooc.enums;
@@ -1601,19 +1647,41 @@ public enum Sex {
 }
 ```
 
+---
 
+3. Controller的启动类中添加扫描
 
+因为common中增加了idworker, 需要在启动的时候扫描到spring容器中, 所以添加注解@ComponentScan
 
+@ComponentScan(basePackages = {"com.imooc", "org.n3r.idworker"})
 
+```java
+package com.imooc;
 
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import tk.mybatis.spring.annotation.MapperScan;
 
-
-
-
-
-
+@SpringBootApplication
+// 扫描所有包以及相关组件包, com.imooc是默认的
+@ComponentScan(basePackages = {"com.imooc", "org.n3r.idworker"})
+// 扫描 mybatis 通用 mapper 所在的包
+@MapperScan(basePackages = "com.imooc.mapper")
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+```
 
 #### controller
+
+
+
+
+
+
 
 
 

@@ -8,6 +8,7 @@ import com.imooc.pojo.bo.UserBO;
 import com.imooc.service.UserService;
 import com.imooc.utils.DateUtil;
 import com.imooc.utils.MD5Utils;
+import org.n3r.idworker.Sid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -21,6 +22,8 @@ public class UserServiceImpl implements UserService {
     // 默认头像
     private static final String DEFAULT_USER_FACE = "http://122.152.205.72:88/group1/M00/00/05/CpoxxFw_8_qAIlFXAAAcIhVPdSg994.png";
 
+    @Autowired
+    private Sid sid;
 
     @Autowired
     private UsersMapper usersMapper;
@@ -49,7 +52,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public Users createUser(UserBO userBO) {
         Users user = new Users();
-        user.setId("");
+
+        user.setId(sid.nextShort());
+
         user.setUsername(userBO.getUserName());
 
         try {
@@ -58,12 +63,15 @@ public class UserServiceImpl implements UserService {
         } catch(Exception e) {
             e.printStackTrace();
         }
+
         // 默认用户昵称同用户名
         user.setNickname(userBO.getUserName());
         user.setFace(DEFAULT_USER_FACE);
         user.setSex(Sex.secret.type);
         // 设置默认生日
         user.setBirthday(DateUtil.stringToDate("1900-01-01"));
+
+
         user.setCreatedTime(new Date());
         user.setUpdatedTime(new Date());
 
