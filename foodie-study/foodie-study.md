@@ -1307,14 +1307,23 @@ public class PassportController {
 
 字符串处理方法, 添加依赖
 
-foodie-dev的pom中
+foodie-dev的pom中, 添加后续要用到的apache工具类依赖
 
 ```xml
-<!-- StringUtils -->
+<dependency>
+    <groupId>commons-codec</groupId>
+    <artifactId>commons-codec</artifactId>
+    <version>1.11</version>
+</dependency>
 <dependency>
     <groupId>org.apache.commons</groupId>
     <artifactId>commons-lang3</artifactId>
     <version>3.4</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-io</artifactId>
+    <version>1.3.2</version>
 </dependency>
 ```
 
@@ -1521,9 +1530,90 @@ public class PassportController {
 
 ### 创建用户
 
+#### UserBO
+
+前端传过来的数据, 一张表单, 将前端页面中的用户名, 密码, 确认密码等数据包装成一个JSON发到后端, 一个偏向业务类型的数据包, 所以这里统一定义为BO对象. 用来接收前端传递的数据体.
+
+foodie-dev-pojo中定义UserBO
+
+```java
+package com.imooc.pojo.bo;
+
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+@Getter
+@Setter
+@ToString
+public class UserBO {
+    private String userName;
+
+    private String password;
+
+    private String confirmedPassword;
+}
+```
+
+#### Service
+
+接口中
+
+```java
+/**
+     * 创建用户
+     */
+public Users createUser(UserBO userBO);
+```
+
+impl中
+
+```java
+
+```
 
 
 
+userId, 
+
+密码需要MD5加密, foodie-dev-common中添加MD5Utils
+
+生日使用日期处理工具类, foodie-dev-common中添加DateUtil
+
+性别的枚举类, foodie-dev-common中添加Sex
+
+```java
+package com.imooc.enums;
+
+public enum Sex {
+    woman(0, "woman"),
+    man(1, "man"),
+    secret(2, "secret");
+
+    public final Integer type;
+
+    public final String value;
+
+    Sex(Integer type, String value) {
+        this.type = type;
+        this.value = value;
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### controller
 
 
 
