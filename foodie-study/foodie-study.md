@@ -108,13 +108,13 @@ entity
 
 ![image-20220111112751750](img/foodie-study/image-20220111112751750.png)
 
-让pojo依赖common, pom文件中添加依赖
+让pojo依赖common, foodie-dev-pojo中的pom文件中添加依赖
 
 ```hxml
 <dependencies>
     <dependency>
         <groupId>org.example</groupId>
-        <artifactId>foodie-dev-pojo</artifactId>
+        <artifactId>foodie-dev-common</artifactId>
         <version>1.0-SNAPSHOT</version>
     </dependency>
 </dependencies>
@@ -1088,40 +1088,25 @@ spring:
 
 ### postman测试Restful接口
 
+postman调用后端api即可
+
+![image-20220113193823255](img/foodie-study/image-20220113193823255.png)
+
+saveorder
 
 
 
+![image-20220113193747646](img/foodie-study/image-20220113193747646.png)
 
+运行代码后:
 
+![image-20220113193833457](img/foodie-study/image-20220113193833457.png)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+其他接口类似的测试
 
 ## 事务的传播propagation
 
+2-24 -> 2-26
 
 
 
@@ -1137,20 +1122,404 @@ spring:
 
 
 
+### 为何不使用@EnableTransactionManagement就能使用事务
 
+@SpringApplication -> @EnableAutoConfiguration -> @Import(AutoConfigurationImportSelector.class) -> AutoConfigurationImportSelector.class -> selectImports -> getAutoConfigurationEntry -> getCandidateConfigurations -> spring.factories
 
+```
+org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration,\
+```
 
+也就是在Spring启动的时候会自动加载
 
+```java
+/**
+ * {@link org.springframework.boot.autoconfigure.EnableAutoConfiguration
+ * Auto-configuration} for Spring transaction.
+ *
+ * @author Stephane Nicoll
+ * @since 1.3.0
+ */
+@Configuration
+@ConditionalOnClass(PlatformTransactionManager.class)
+@AutoConfigureAfter({ JtaAutoConfiguration.class, HibernateJpaAutoConfiguration.class,
+		DataSourceTransactionManagerAutoConfiguration.class,
+		Neo4jDataAutoConfiguration.class })
+@EnableConfigurationProperties(TransactionProperties.class)
+public class TransactionAutoConfiguration {}
+```
 
+![image-20220113194653538](img/foodie-study/image-20220113194653538.png)
 
+其中已经@EnableTransactionManagement开启事务管理. 基于spring aop: 动态代理和cglib
 
+所以启动类中对于注解@EnableTransactionManagement可加可不加
 
+# 单体电商的核心功能
 
+* 注册和登录
 
+* cookie和session
+* 集成swapper2 api, 接口文档
+* 分类的设计与实现
+* 首页商品推荐 -> 首页懒加载
+* 商品搜索与分页
+* 商品详情和评论渲染
+* 购物车和订单. 电商核心. 购物车的多种实现方式; 订单全局id? 订单唯一(刷新只会有一个); 控制库存, 超卖
+* 支付. 电商核心. 微信和支付宝. 时序图讲解支付节点
 
 # 注册与登陆
 
+## 流程
+
+* 用户名流程
+
+用户 -> 输入用户名密码(前提注册) -> 校验(失败重新输入) -> 注册/登录成功
+
+* 邮箱注册流程
+
+用户 -> 输入用户名邮箱密码 -> 发送激活邮件(token), token有时效性 -> 用户点击链接 -> 注册成功
+
+![image-20220113195928726](img/foodie-study/image-20220113195928726.png)
+
+很长的参数, ac=, 就是token. 重要的参数.
+
+对于注册来说, 只需要关注token和email就可以. -> 后台接收到地址后, 校验token和邮箱是否匹配, 如果匹配则激活成功.
+
+* 手机号注册登陆流程
+
+用户 -> 输入手机号 -> 发送验证码 -> 校验验证码(时效性) -> 注册成功
+
+---
+
+这里使用用户名密码方式. 基于风控和信任的考虑
+
 ## 用户注册
+
+校验: 前后端都要做, 前端校验可以降低后端压力, 后端校验预防绕过前端的攻击
+
+### 校验用户名是否存在queryUserNameIsExisted
+
+第一步, 校验用户名是否存在, 避免重复注册
+
+开发步骤: 从下往上, 数据层 -> service -> 接口层. mapper已经提供了, 写service层
+
+1. service层
+
+UserService接口
+
+```java
+package com.imooc.service;
+
+public interface UserService {
+
+    /**
+     * 判断用户名是否存在
+     */
+    public boolean queryUserNameIsExisted(String userName);
+
+}
+```
+
+impl, 这里使用Example查询条件的方式来做查询
+
+UserServiceImpl
+
+```java
+package com.imooc.service.impl;
+
+import com.imooc.mapper.UsersMapper;
+import com.imooc.pojo.Users;
+import com.imooc.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import tk.mybatis.mapper.entity.Example;
+
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    private UsersMapper usersMapper;
+
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public boolean queryUserNameIsExisted(String userName) {
+        // 根据条件查询
+        Example example = new Example(Users.class);
+        Example.Criteria userCriteria = example.createCriteria();
+        userCriteria.andEqualTo("username", userName);
+
+        Users users = usersMapper.selectOneByExample(example);
+        return null != users;
+    }
+}
+```
+
+2. controller层
+
+PassportController
+
+```java
+package com.imooc.controller;
+
+import com.imooc.service.UserService;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("passport")
+public class PassportController {
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * 用户名是否存在
+     *
+     * @param userName
+     * @return 状态码
+     */
+    @GetMapping("/userNameIsExisted")
+    public int userNameIsExisted(@RequestParam String userName) {
+        // 判空
+        if (StringUtils.isBlank(userName)) {
+            return 500;
+        }
+
+        // 是否注册过
+        if (userService.queryUserNameIsExisted(userName)) {
+            // 注册过
+            return 500;
+        }
+
+        // 成功
+        return 200;
+    }
+}
+```
+
+字符串处理方法, 添加依赖
+
+foodie-dev的pom中
+
+```xml
+<!-- StringUtils -->
+<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-lang3</artifactId>
+    <version>3.4</version>
+</dependency>
+```
+
+### 自定义响应JSONResult
+
+原始是httpstatus. 按照规范
+
+查看jd的recommend返回json格式
+
+<img src="img/foodie-study/image-20220113213113463.png" alt="image-20220113213113463" style="zoom:67%;" />
+
+本身就是一个实体类, 包含了各种属性, 可以将这些内容做封装
+
+JSONResult.java -> foodie-dev-common中, 
+
+```java
+package com.imooc.utils;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+/**
+ *
+ * @Title: IMOOCJSONResult.java
+ * @Package com.imooc.utils
+ * @Description: 自定义响应数据结构
+ * 				本类可提供给 H5/ios/安卓/公众号/小程序 使用
+ * 				前端接受此类数据（json object)后，可自行根据业务去实现相关功能
+ *
+ * 				200：表示成功
+ * 				500：表示错误，错误信息在msg字段中
+ * 				501：bean验证错误，不管多少个错误都以map形式返回
+ * 				502：拦截器拦截到用户token出错
+ * 				555：异常抛出信息
+ * 				556: 用户qq校验异常
+ * @Copyright: Copyright (c) 2020
+ * @Company: www.imooc.com
+ * @author 慕课网 - 风间影月
+ * @version V1.0
+ */
+public class JSONResult {
+
+    // 定义jackson对象
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    // 响应业务状态
+    private Integer status;
+
+    // 响应消息
+    private String msg;
+
+    // 响应中的数据
+    private Object data;
+
+    @JsonIgnore
+    private String ok;	// 不使用
+
+    public static JSONResult build(Integer status, String msg, Object data) {
+        return new JSONResult(status, msg, data);
+    }
+
+    public static JSONResult build(Integer status, String msg, Object data, String ok) {
+        return new JSONResult(status, msg, data, ok);
+    }
+
+    public static JSONResult ok(Object data) {
+        return new JSONResult(data);
+    }
+
+    public static JSONResult ok() {
+        return new JSONResult(null);
+    }
+
+    public static JSONResult errorMsg(String msg) {
+        return new JSONResult(500, msg, null);
+    }
+
+    public static JSONResult errorMap(Object data) {
+        return new JSONResult(501, "error", data);
+    }
+
+    public static JSONResult errorTokenMsg(String msg) {
+        return new JSONResult(502, msg, null);
+    }
+
+    public static JSONResult errorException(String msg) {
+        return new JSONResult(555, msg, null);
+    }
+
+    public static JSONResult errorUserQQ(String msg) {
+        return new JSONResult(556, msg, null);
+    }
+
+    public JSONResult() {
+
+    }
+
+    public JSONResult(Integer status, String msg, Object data) {
+        this.status = status;
+        this.msg = msg;
+        this.data = data;
+    }
+
+    public JSONResult(Integer status, String msg, Object data, String ok) {
+        this.status = status;
+        this.msg = msg;
+        this.data = data;
+        this.ok = ok;
+    }
+
+    public JSONResult(Object data) {
+        this.status = 200;
+        this.msg = "OK";
+        this.data = data;
+    }
+
+    public Boolean isOK() {
+        return this.status == 200;
+    }
+
+    public Integer getStatus() {
+        return status;
+    }
+
+    public void setStatus(Integer status) {
+        this.status = status;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+
+    public Object getData() {
+        return data;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
+    }
+
+    public String getOk() {
+        return ok;
+    }
+
+    public void setOk(String ok) {
+        this.ok = ok;
+    }
+}
+```
+
+改变Controller的返回
+
+```java
+package com.imooc.controller;
+
+import com.imooc.service.UserService;
+import com.imooc.utils.JSONResult;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("passport")
+public class PassportController {
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * 用户名是否存在
+     *
+     * @param userName
+     * @return 状态码
+     */
+    @GetMapping("/userNameIsExisted")
+    public JSONResult userNameIsExisted(@RequestParam String userName) {
+        // 判空
+        if (StringUtils.isBlank(userName)) {
+            return JSONResult.errorMsg("user name cannot be empty");
+        }
+
+        // 是否注册过
+        if (userService.queryUserNameIsExisted(userName)) {
+            // 注册过
+            return JSONResult.errorMsg("user name already exists");
+        }
+
+        // 成功
+        return JSONResult.ok();
+        // return HttpStatus.OK.value();
+    }
+}
+```
+
+![image-20220113214855986](img/foodie-study/image-20220113214855986.png)
+
+### 创建用户
 
 
 
