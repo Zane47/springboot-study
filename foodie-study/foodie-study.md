@@ -804,35 +804,305 @@ DELETE -> /order/{id} -> deleteOrder?id=1001
 
 基于webservice的CRUD -> Stu表来做demo
 
+get请求: getStu
+
+post请求:saveStu, updateStu, deleteStu
+
+1. Controller层
+
+foodie-dev-api中
+
+```java
+package com.imooc.controller;
+
+import com.imooc.service.StuService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class StuDemoController {
+
+    @Autowired
+    private StuService stuService;
+
+    @GetMapping("/getStu")
+    public Object getStu(Integer id) {
+        return stuService.getStuInfo(id);
+    }
+
+    @PostMapping("/saveStu")
+    public Object saveStu() {
+        stuService.saveStu();
+        return "saveStu OK";
+    }
+
+    @PostMapping("/updateStu")
+    public Object updateStu(int id) {
+        stuService.updateStu(id);
+        return "updateStu OK";
+    }
+
+    @PostMapping("/deleteStu")
+    public Object deleteStu(int id) {
+        stuService.deleteStu(id);
+        return "deleteStu OK";
+    }
+}
+```
+
+2. service层
+
+foodie-dev-service
+
+```java
+package com.imooc.service;
+
+import com.imooc.pojo.Stu;
+
+public interface StuService {
+
+    /**
+     * 根据id获取student info
+     *
+     * @param id
+     * @return
+     */
+    public Stu getStuInfo(Integer id);
+
+    /**
+     * 保存学生数据, 一般由前端穿来, 这边直接写死
+     */
+    public void saveStu();
+
+    /**
+     * update
+     *
+     * @param id
+     */
+    public void updateStu(Integer id);
+
+    /**
+     * delete
+     *
+     * @param id
+     */
+    public void deleteStu(Integer id);
+    public void saveParent();
+    public void saveChildren();
+}
+```
+
+impl:
+
+```java
+package com.imooc.service.impl;
+
+import com.imooc.mapper.StuMapper;
+import com.imooc.pojo.Stu;
+import com.imooc.service.StuService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.swing.*;
+
+@Service
+public class StuServiceImpl implements StuService {
+
+    @Autowired
+    private StuMapper stuMapper;
 
 
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public Stu getStuInfo(Integer id) {
+        return stuMapper.selectByPrimaryKey(id);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void saveStu() {
+        Stu stu = new Stu();
+        stu.setName("jack");
+        stu.setAge(19);
+        stuMapper.insert(stu);
+    }
 
 
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void updateStu(Integer id) {
+        Stu stu = new Stu();
+        stu.setId(id);
+        stu.setName("lucy");
+        stu.setAge(20);
+        stuMapper.updateByPrimaryKey(stu);
+    }
 
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void deleteStu(Integer id) {
+        stuMapper.deleteByPrimaryKey(id);
+    }
+
+    @Override
+    public void saveParent() {
+
+    }
+
+    @Override
+    public void saveChildren() {
+
+    }
+}
+```
+
+stuMapper中的方法由之前生成的类提供
+
+其中的
+
+```java
+@Autowired
+private StuMapper stuMapper;
+```
+
+会报错
 
 ![image-20220112221400991](img/foodie-study/image-20220112221400991.png)
 
+解决报错:
 
+首先需要让spring扫描mapper
 
+在foodie-dev-api的Application启动类中, 添加扫描注解@MapperScan(basePackages = "com.imooc.mapper"), 扫描对应包下的类
 
+```java
+package com.imooc;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import tk.mybatis.spring.annotation.MapperScan;
+
+@SpringBootApplication
+// 扫描 mybatis 通用 mapper 所在的包
+@MapperScan(basePackages = "com.imooc.mapper")
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+
+```
+
+此时已经将类添加到了容器中, 但是还是红色下划线, 需要取消此类提示, 如下所示: setting -> inspections -> spring -> spring core -> code -> 
 
 ![image-20220112223911969](img/foodie-study/image-20220112223911969.png)
 
+---
 
+幂等性说明: 
 
+这里的一系列接口, 例如: save接口, 暂时不保证幂等性 -> 后续课程中调整幂等性
 
+---
 
+Problem: 
 
+ThinkPad运行后, 报错:
 
-save接口, 暂时不保证幂等性 -> 后续课程
+```
+2022-01-13 09:27:24.903 ERROR 7608 --- [nio-8088-exec-1] com.zaxxer.hikari.pool.HikariPool        : DataSourceHikariCP - Exception during pool initialization.
 
+com.mysql.jdbc.exceptions.jdbc4.CommunicationsException: Communications link failure
 
+The last packet successfully received from the server was 597 milliseconds ago.  The last packet sent successfully to the server was 592 milliseconds ago.
+...
+Caused by: javax.net.ssl.SSLHandshakeException: No appropriate protocol (protocol is disabled or cipher suites are inappropriate)
+	...
+2022-01-13 09:27:24.922 ERROR 7608 --- [nio-8088-exec-1] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed; nested exception is org.mybatis.spring.MyBatisSystemException: nested exception is org.apache.ibatis.exceptions.PersistenceException: 
+### Error querying database.  Cause: org.springframework.jdbc.CannotGetJdbcConnectionException: Failed to obtain JDBC Connection; nested exception is com.mysql.jdbc.exceptions.jdbc4.CommunicationsException: Communications link failure
 
+The last packet successfully received from the server was 597 milliseconds ago.  The last packet sent successfully to the server was 592 milliseconds ago.
+### The error may exist in com/imooc/mapper/StuMapper.java (best guess)
+### The error may involve com.imooc.mapper.StuMapper.selectByPrimaryKey
+### The error occurred while executing a query
+### Cause: org.springframework.jdbc.CannotGetJdbcConnectionException: Failed to obtain JDBC Connection; nested exception is com.mysql.jdbc.exceptions.jdbc4.CommunicationsException: Communications link failure
 
+The last packet successfully received from the server was 597 milliseconds ago.  The last packet sent successfully to the server was 592 milliseconds ago.] with root cause
+
+javax.net.ssl.SSLHandshakeException: No appropriate protocol (protocol is disabled or cipher suites are inappropriate)
+...
+```
+
+Solution: [jdk1.8版本导致SSL调用权限上有问题](https://blog.csdn.net/weixin_38111957/article/details/80577688)
+
+ThinkPad jdk8版本:
+
+```
+java version "1.8.0_301"
+Java(TM) SE Runtime Environment (build 1.8.0_301-b09)
+Java HotSpot(TM) 64-Bit Server VM (build 25.301-b09, mixed mode)
+```
+
+jdk安装目录下, C:\jdk\jdk_1.8\jre\lib\security\java.security中找到并删除SSLv3, 删掉SSLv3就是允许SSL调用
+
+![image-20220113093510763](img/foodie-study/image-20220113093510763.png)
+
+但运行还是出错. 最后发现SSLv3后面有两个和它后缀一样的算法, **将它们一起删掉后重启项目**, 成功解决问题
+
+![image-20220113093725583](img/foodie-study/image-20220113093725583.png)
+
+最后的文件内容:
+
+```
+jdk.tls.disabledAlgorithms=RC4, DES, MD5withRSA, \
+    DH keySize < 1024, EC keySize < 224, 3DES_EDE_CBC, anon, NULL, \
+    include jdk.disabled.namedCurves
+```
+
+---
+
+或者直接url中添加useSSL=false即可
+
+```yaml
+spring:
+  datasource: # 数据源的相关配置
+    type: com.zaxxer.hikari.HikariDataSource   # 数据源类型: HikariCP
+    driver-class-name: com.mysql.jdbc.Driver   # mysql驱动
+    url: jdbc:mysql://114.55.64.149:3306/foodie-shop-dev?useUnicode=true&characterEncoding=UTF-8&autoReconnect&useSSL=false
+    username: root
+    password: mypwd
+```
+
+---
+
+浏览器访问get接口, 成功调用: `http://localhost:8088/getStu?id=1203`
+
+![image-20220113093919194](img/foodie-study/image-20220113093919194.png)
 
 
 
 ### postman测试Restful接口
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
