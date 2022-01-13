@@ -1677,25 +1677,79 @@ public class Application {
 
 #### controller
 
+foodie-dev-api中写创建用户接口regist
 
+```java
+/**
+     * 创建用户
+     *
+     * @param userBO 前端输入数据
+     * @return users
+     */
+@PostMapping("/regist")
+public JSONResult regist(@RequestBody UserBO userBO) {
+    // ------------------------ 校验 ------------------------
+    // 元素不能为空
+    if (StringUtils.isBlank(userBO.getUserName()) ||
+        StringUtils.isBlank(userBO.getPassword()) ||
+        StringUtils.isBlank(userBO.getConfirmedPassword())) {
+        return JSONResult.errorMsg("error, empty paramter");
+    }
 
+    // 查询用户名是否存在
+    if (userService.queryUserNameIsExisted(userBO.getUserName())) {
+        return JSONResult.errorMsg("user name already exists");
+    }
 
+    // 密码长度
+    if (StringUtils.length(userBO.getPassword()) < 6) {
+        return JSONResult.errorMsg("the length of pwd is too short");
+    }
 
+    // 两次输入密码一致
+    if (!StringUtils.equals(userBO.getPassword(), userBO.getConfirmedPassword())) {
+        return JSONResult.errorMsg("inconsistent password");
+    }
 
+    // ------------------------ 注册 ------------------------
+    Users user = userService.createUser(userBO);
 
+    // null properties
+    user.setPassword(null);
+    user.setMobile(null);
+    user.setEmail(null);
+    user.setCreatedTime(null);
+    user.setUpdatedTime(null);
+    user.setBirthday(null);
 
+    // ------------------------ return ------------------------
+    return JSONResult.ok(user);
+}
+```
 
+![image-20220113234511939](img/foodie-study/image-20220113234511939.png)
 
+````
+localhost:8088/passport/regist
 
-
-
-
-
-
-
-
+{
+    "userName": "test0113",
+    "password": "test0113",
+    "confirmedPassword": "test0113"
+}
+````
 
 ## 基于Swagger2的API文档
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1745,6 +1799,7 @@ public class Application {
 
 
 
+### 实现登录
 
 
 
@@ -1754,6 +1809,57 @@ public class Application {
 
 
 
+
+
+## cookie和session
+
+
+
+
+
+
+
+
+
+## 用户信息在页面显示
+
+
+
+
+
+
+
+## 日志
+
+### 整合log4j打印日志
+
+
+
+
+
+
+
+### 通过日志监控service执行时间
+
+
+
+
+
+
+
+
+
+## 用户退出登录清空cookie
+
+
+
+
+
+
+
+
+
+## 开启MyBatis日志Sql打印
 
 
 
@@ -1802,6 +1908,152 @@ public class Application {
 
 
 # 商品评价
+
+
+
+
+
+
+
+
+
+# 购物车
+
+
+
+
+
+
+
+
+
+# 收货地址
+
+
+
+
+
+
+
+# 订单
+
+## 确认订单
+
+
+
+
+
+
+
+
+
+
+
+## 创建订单
+
+
+
+
+
+
+
+
+
+# 支付
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 定时任务
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 用户中心
+
+
+
+## 用户信息
+
+
+
+
+
+
+
+## 用户头像
+
+
+
+
+
+
+
+## 用户订单管理
+
+
+
+
+
+
+
+## 用户评价管理
+
+
+
+
+
+
+
+## 用户中心首页
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 云服务部署
 
 
 
