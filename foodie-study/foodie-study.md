@@ -1965,25 +1965,141 @@ public class UserBO {
 
 ### tomcat运行前端
 
+静态资源服务器, 后续会使用nginx发布前端代码, 这里先使用tomcat
+
+内置的tomcat版本
+
+![image-20220114145818144](img/foodie-study/image-20220114145818144.png)
+
+tomcat9版本
+
+1. 将foodie-shop拷贝到apache-tomcat-9.0.13\webapps中
+
+<img src="img/foodie-study/image-20220114150801256.png" alt="image-20220114150801256" style="zoom: 50%;" />
+
+实际运行的tomcat是按照配置的环境变量来的
+
+[windows下配置两个或多个Tomcat启动的方法](https://blog.51cto.com/beyang/3271017)
+
+2. bin中启动tomcat
+
+```
+startup.bat
+```
+
+3. 浏览器访问
+
+`http://localhost:8080/foodie-shop|`
+
+F12可以看到报错, 后续需要修改
+
+### 设置跨域配置实现前后端联调
+
+1. 查看调用
+
+前端的register.html代码中找到发送后端的代码
+
+```html
+var serverUrl = app.serverUrl;
+var returnUrl = this.returnUrl;
+// form提交
+axios.defaults.withCredentials = true;
+// console.log(axios.defaults);
+axios.post(serverUrl + '/passport/regist', userBO)
+```
+
+可以看到是app.serverUrl, 查看app
+
+```
+<script type="text/javascript " src="js/app.js"></script>
+```
+
+所以在js/app.js中查看
+
+```javascript
+/* 开发环境 */
+// serverUrl: "http://localhost:8088",                                   // 接口服务接口地址
+// paymentServerUrl: "http://192.168.1.3:8089",                            // 支付中心服务地址
+// shopServerUrl: "http://localhost:8080/foodie-shop/",                  // 门户网站地址
+// centerServerUrl: "http://localhost:8080/foodie-center/",              // 用户中心地址
+// cookieDomain: "",                                                       // cookie 域
+
+/* 生产环境 */
+serverUrl: "http://api.z.mukewang.com:8088/foodie-dev-api",                      // 接口服务接口地址
+    paymentServerUrl: "http://payment.t.mukewang.com/foodie-payment",       // 支付中心服务地址
+        shopServerUrl: "http://shop.z.mukewang.com:8080/foodie-shop/",                            // 门户网站地址
+            centerServerUrl: "http://center.z.mukewang.com:8080/foodie-center/",                        // 用户中心地址
+cookieDomain: ".z.mukewang.com;",                                       // cookie 域
+```
+
+使用开发环境, serverUrl修改为本地的地址和端口
+
+![image-20220114152157941](img/foodie-study/image-20220114152157941.png)
+
+然后在前台注册界面中输入imooc, 看到控制台中输出
+
+![image-20220114155314063](img/foodie-study/image-20220114155314063.png)
+
+CORS跨域问题, 需要设置. 8080端口请求8088端口, 发生跨域
+
+ps: 前端的请求axios, 是vue中的异步提交组件
+
+2. 后端添加CORS配置类, 添加前端地址
+
+foodie-dev-api中添加CorsConfig
+
+```java
+package com.imooc.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+
+@Configuration
+public class CorsConfig {
+
+    public CorsConfig() {
+
+    }
+
+    @Bean
+    public CorsFilter corsFilter() {
+        // 1. 添加cors配置信息
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.addAllowedOrigin("http://localhost:8080");
+
+        // 请求数据是否可以携带内容, 是否可以发送cookie信息
+        corsConfig.setAllowCredentials(true);
+
+        // 设置允许请求的方式
+        corsConfig.addAllowedMethod("*");
+
+        // 设置允许的header
+        corsConfig.addAllowedHeader("*");
+
+        // 2. 为url添加映射路径
+        // /**: 所有的路由
+        UrlBasedCorsConfigurationSource corsConfigSource = new UrlBasedCorsConfigurationSource();
+        corsConfigSource.registerCorsConfiguration("/**", corsConfig);
+
+        return new CorsFilter(corsConfigSource);
+    }
+}
+```
+
+<img src="img/foodie-study/image-20220114161246929.png" alt="image-20220114161246929" style="zoom:67%;" />
+
+注册后成功插入数据库
+
+![image-20220114161512287](img/foodie-study/image-20220114161512287.png)
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-### 前后端联调
-
-设置跨域配置实现前后端联调
 
 
 
