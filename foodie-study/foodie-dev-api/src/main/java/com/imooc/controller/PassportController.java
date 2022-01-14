@@ -51,10 +51,12 @@ public class PassportController {
     }
 
     /**
-     * 创建用户
+     * create user
      *
      * @param userBO 前端输入数据
-     * @return users
+     * @param request
+     * @param response
+     * @return
      */
     @ApiOperation(value = "register", notes = "register user", httpMethod = "POST")
     @PostMapping("/regist")
@@ -98,9 +100,11 @@ public class PassportController {
     }
 
     /**
-     * 用户登陆
+     * login
      *
      * @param userBO
+     * @param request
+     * @param response
      * @return
      */
     @ApiOperation(value = "user login", notes = "user login", httpMethod="POST")
@@ -129,6 +133,10 @@ public class PassportController {
             CookieUtils.setCookie(request, response,
                     "user", JsonUtils.objectToJson(user), true);
 
+            // TODO 生成用户token，存入redis会话
+            // TODO 同步购物车数据
+
+
             return JsonResult.ok(user);
         } catch(Exception e) {
             return JsonResult.errorMsg(e.getMessage());
@@ -137,6 +145,29 @@ public class PassportController {
 
 
     }
+
+    /**
+     * logout
+     *
+     * @param request request
+     * @param response response
+     * @return JsonResult
+     */
+    @ApiOperation(value = "logout", notes = "user logout", httpMethod = "POST")
+    @PostMapping("/logout")
+    public JsonResult logout(@RequestParam String userId,
+                             HttpServletRequest request, HttpServletResponse response) {
+
+        // 删除user相关cookie
+        CookieUtils.deleteCookie(request, response, "user");
+
+
+        // TODO 用户退出登录，需要清空购物车
+        // TODO 分布式会话中需要清除用户数据
+
+        return JsonResult.ok();
+    }
+
 
 
 

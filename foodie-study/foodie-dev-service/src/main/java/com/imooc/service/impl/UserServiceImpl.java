@@ -31,6 +31,13 @@ public class UserServiceImpl implements UserService {
     @Transactional(propagation = Propagation.SUPPORTS)
     @Override
     public boolean queryUserNameIsExisted(String userName) {
+
+        /*try {
+            Thread.sleep(4000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }*/
+
         // 根据条件查询
         Example example = new Example(Users.class);
         Example.Criteria userCriteria = example.createCriteria();

@@ -2304,41 +2304,218 @@ if (userCookie != null && userCookie != undefined && userCookie != '') {
 
 同理注册的时候也需要使用. 相同的内容拷贝过去即可
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## 日志
 
 ### 整合log4j打印日志
 
+spring本身集成了日志框架
+
+![image-20220114202137812](img/foodie-study/image-20220114202137812.png)
 
 
 
+1. 移除默认日志
 
+foodie-dev中
 
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
+
+2. 添加日志框架依赖
+
+foodie-dev中
+
+```xml
+<!--引入日志依赖 抽象层 与 实现层-->
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-api</artifactId>
+    <version>1.7.21</version>
+</dependency>
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-log4j12</artifactId>
+    <version>1.7.21</version>
+</dependency>
+```
+
+3. 创建log4j.properties并且放到foodie-dev资源文件目录src/main/resources
+
+```properties
+log4j.rootLogger=DEBUG,stdout,file
+log4j.additivity.org.apache=true
+
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.threshold=INFO
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%-5p %c{1}:%L - %m%n
+
+# daily rolling 天为单位保存
+log4j.appender.file=org.apache.log4j.DailyRollingFileAppender
+log4j.appender.file.layout=org.apache.log4j.PatternLayout
+log4j.appender.file.DatePattern='.'yyyy-MM-dd-HH-mm
+log4j.appender.file.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
+log4j.appender.file.Threshold=INFO
+log4j.appender.file.append=true
+log4j.appender.file.File=/workspaces/logs/foodie-api/imooc.log
+```
+
+4. 测试
+
+helloController中添加日志记录者
+
+```java
+private final static Logger logger = LoggerFactory.getLogger(HelloController.class);
+
+@GetMapping("/hello")
+public Object hello() {
+
+    logger.info("hello");
+    logger.debug("hello");
+    logger.warn("hello");
+    logger.error("hello");
+
+    return "hello world";
+}
+```
+
+访问后查看日志:
+
+```
+INFO  HelloController:23 - hello
+WARN  HelloController:25 - hello
+ERROR HelloController:26 - hello
+```
 
 ### 通过日志监控service执行时间
 
+时间过长, error. 时间略长, info.
+
+借助Spring AOP来实现. 
+
+1. 添加AOP依赖
+
+foodie-dev中
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-aop</artifactId>
+</dependency>
+```
+
+2. foodie-dev-api中添加aop切面类
+
+```java
+package com.imooc.aspect;
+
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+@Aspect
+@Component
+public class ServiceLogAspect {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(ServiceLogAspect.class);
 
 
+    /**
+     * AOP通知：
+     * 1. 前置通知：在方法调用之前执行
+     * 2. 后置通知：在方法正常调用之后执行
+     * 3. 环绕通知：在方法调用之前和之后，都分别可以执行的通知
+     * 4. 异常通知：如果在方法调用过程中发生异常，则通知
+     * 5. 最终通知：在方法调用之后执行
+     */
+
+    /**
+     * 切面表达式：
+     * execution 代表所要执行的表达式主体
+     * 第一处 * 代表方法返回类型 *代表所有类型
+     * 第二处 包名代表aop监控的类所在的包
+     * 第三处 .. 代表该包以及其子包下的所有类方法
+     * 第四处 * 代表类名，*代表所有类
+     * 第五处 *(..) *代表类中的方法名，(..)表示方法中的任何参数
+     *
+     * @param joinPoint
+     * @return
+     */
+    @Around("execution(* com.imooc.service.impl..*.*(..))")
+    public Object recordTimeLog(ProceedingJoinPoint joinPoint) {
+
+        LOGGER.info("==== proceed {}.{} ====",
+                    joinPoint.getTarget().getClass(), joinPoint.getSignature());
 
 
+        long startTime = System.currentTimeMillis();
 
+        // 执行目标 service
+        Object proceed = null;
+        try {
+            proceed = joinPoint.proceed();
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
 
+        long endTime = System.currentTimeMillis();
+        long duration = endTime - startTime;
 
+        if (duration > 3000) {
+            LOGGER.error("====== proceed end. duration: {} ms ======", duration);
+        } else if (duration > 2000) {
+            LOGGER.warn("====== proceed end. duration: {} ms ======", duration);
+        } else {
+            LOGGER.info("====== proceed end. duration: {} ms ======", duration);
+        }
+
+        return proceed;
+    }
+}
+```
+
+3. 手动sleep测试
+
+```java
+try {
+    Thread.sleep(4000);
+} catch (InterruptedException e) {
+    e.printStackTrace();
+}
+```
+
+日志
+
+```
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.UserServiceImpl.queryUserNameIsExisted ====
+INFO  HikariDataSource:110 - DataSourceHikariCP - Starting...
+INFO  HikariDataSource:123 - DataSourceHikariCP - Start completed.
+ERROR ServiceLogAspect:60 - ====== proceed end. duration: 4722 ms ======
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.UserServiceImpl.queryUser4Login ====
+INFO  ServiceLogAspect:64 - ====== proceed end. duration: 27 ms ======
+INFO  CookieUtils:210 - ========== domainName: localhost ==========
+```
+
+---
+
+-> 需要注意的是, 这里的日志是单机的, 后续在分布式系统中, 各个日志会分布在不同的系统中, 后续使用Kafka做日志收集汇总工作
 
 ## 用户退出登录清空cookie
+
+清空cookie即可
 
 
 
