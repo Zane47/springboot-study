@@ -2179,23 +2179,130 @@ public JsonResult login(@RequestBody UserBO userBO) {
 private String confirmedPassword;
 ```
 
-## cookie和session
+## 用户信息在当前页面显示
 
-cookie:
+### cookie和session
 
-- 以键值对的形式存储信息在浏览器.存储在浏览器的缓存, 大小有限制(不超过4kb)
+cookie: 存储在浏览器的缓. 例子, `www.jd.com`中 F12中的application
 
-- cookie不能跨域，当前及其父级域名可以取值
+- 以键值对的形式存储信息在浏览器. 存储在浏览器的缓存, 大小有限制(不超过4kb)
 
+- cookie不能跨域，当前及其父级域名可以取值. 例如: `www.jd.com`中jd.com就是一级域名
 
+* cookie可以设置有效时期expires
 
+* cookie可以设置path. 路由信息, 一般就是`/`, 所有路径都可以使用cookie的值
 
+session: 服务器端的缓存. -> 后续讲解有状态session和无状态session
+
+* 基于服务器内存的缓存(非持久化. 重启会清空), 可保存请求会话
+
+* 每个session通过sessionid来区分不同请求
+* session可以设置过期时间
+* 以键值对的形式存储信息
 
 ---
 
-登陆之后的界面中, 仍然没有登陆后的用户信息 -> 前后端一体时, jsp中是后端设置session, 前端jsp拿到相关信息
+```java
+@GetMapping("/setSession")
+public Object setSession(HttpServletRequest request) {
+    HttpSession session = request.getSession();
+    session.setAttribute("userInfo", "newUser");
+    session.setMaxInactiveInterval(3600);
+    session.getAttribute("userInfo");
+    session.removeAttribute("userInfo");
+    return "setSession ok";
+}
+```
 
-前后端分离之后, 
+![image-20220114193107573](img/foodie-study/image-20220114193107573.png)
+
+浏览器中的JSESSIONID就是和后端session相关的. 不同的会话不同的id. 在requestHeader之中. 后端可以获取该id根据不同的id当前是哪个用户会话. 在server就可以获得对应的userinfo.
+
+![image-20220114193226931](img/foodie-study/image-20220114193226931.png)
+
+### 用户登陆后显示信息
+
+登陆之后的界面中, 仍然没有登陆后的用户信息(登录后显示用户昵称和头像) -> 前后端一体时, jsp中是后端设置session, 前端jsp拿到相关信息
+
+session在html中无法获得. 
+
+查看jd的登陆效果, 登陆信息保存在cookie中. F12的Application中clear cookie, 会发现需要重新登陆. 
+
+-> 这里模仿jd将信息存储在cookie中
+
+-> session也很重要. 后面Redis实现分布式会话
+
+---
+
+在login中, 设置cookie, 在设置之前需要考虑将用户的敏感信息去除. 有两种方法:
+
+* 在Users类中对敏感属性设置@JsonIgion, 这样在返回json对象的时候不会返回这些属性
+
+但是不建议这么做, 破坏了完整性.
+
+```java
+@JsonIgnore
+private String password;
+@JsonIgnore
+private String realname;
+```
+
+<img src="img/foodie-study/image-20220114194536247.png" alt="image-20220114194536247" style="zoom:67%;" />
+
+* 保留Users的完整, 手动屏蔽敏感信息
+
+```java
+// 设置敏感信息为null
+user.setPassword(null);
+user.setMobile(null);
+user.setEmail(null);
+user.setCreatedTime(null);
+user.setUpdatedTime(null);
+user.setBirthday(null);
+```
+
+![image-20220114194717888](img/foodie-study/image-20220114194717888.png)
+
+---
+
+设置cookie可以在前端也可以在服务端. 这里在服务端设置
+
+复制CookieUtils, 调用其中的方法. 将user的方法转成json(JsonUtils)放到user中
+
+```java
+// 设置cookie
+CookieUtils.setCookie(request, response,
+                      "user", JsonUtils.objectToJson(user), true);
+```
+
+前端index.html去cookie中获取user, 做展示
+
+```javascript
+var userCookie = app.getCookie("user");
+if (userCookie != null && userCookie != undefined && userCookie != '') {
+    var userInfoStr = decodeURIComponent(userCookie);
+    if (userInfoStr != null && userInfoStr != undefined && userInfoStr != '') {
+        var userInfo = JSON.parse(userInfoStr);
+        // 判断是否是一个对象
+        if ( typeof(userInfo)  == "object" ) {
+            this.userIsLogin = true;
+            // console.log(userInfo);
+            this.userInfo = userInfo;
+        } else {
+            this.userIsLogin = false;
+            this.userInfo = {};
+        }
+    }
+} else {
+    this.userIsLogin = false;
+    this.userInfo = {};
+}
+```
+
+![image-20220114200537794](img/foodie-study/image-20220114200537794.png)
+
+同理注册的时候也需要使用. 相同的内容拷贝过去即可
 
 
 
@@ -2204,26 +2311,6 @@ cookie:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## 用户信息在页面显示
 
 
 

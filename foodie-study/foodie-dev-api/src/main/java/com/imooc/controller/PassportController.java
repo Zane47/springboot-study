@@ -3,13 +3,18 @@ package com.imooc.controller;
 import com.imooc.pojo.Users;
 import com.imooc.pojo.bo.UserBO;
 import com.imooc.service.UserService;
+import com.imooc.utils.CookieUtils;
 import com.imooc.utils.JsonResult;
+import com.imooc.utils.JsonUtils;
 import com.imooc.utils.MD5Utils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 @Api(value = "register and login", tags = {"apis for register and login"})
 @RestController
@@ -53,7 +58,8 @@ public class PassportController {
      */
     @ApiOperation(value = "register", notes = "register user", httpMethod = "POST")
     @PostMapping("/regist")
-    public JsonResult regist(@RequestBody UserBO userBO) {
+    public JsonResult regist(@RequestBody UserBO userBO,
+                             HttpServletRequest request, HttpServletResponse response) {
         // ------------------------ 校验 ------------------------
         // 元素不能为空
         if (StringUtils.isBlank(userBO.getUserName()) ||
@@ -80,13 +86,12 @@ public class PassportController {
         // ------------------------ 注册 ------------------------
         Users user = userService.createUser(userBO);
 
-        // null properties
-        user.setPassword(null);
-        user.setMobile(null);
-        user.setEmail(null);
-        user.setCreatedTime(null);
-        user.setUpdatedTime(null);
-        user.setBirthday(null);
+        // 设置敏感信息为null
+        setNullProperty(user);
+
+        // 设置cookie
+        CookieUtils.setCookie(request, response,
+                "user", JsonUtils.objectToJson(user), true);
 
         // ------------------------ return ------------------------
         return JsonResult.ok(user);
@@ -100,7 +105,8 @@ public class PassportController {
      */
     @ApiOperation(value = "user login", notes = "user login", httpMethod="POST")
     @PostMapping("/login")
-    public JsonResult login(@RequestBody UserBO userBO) {
+    public JsonResult login(@RequestBody UserBO userBO,
+                            HttpServletRequest request, HttpServletResponse response) {
         // ------------------------ check ------------------------
         if (StringUtils.isBlank(userBO.getUserName()) || StringUtils.isBlank(userBO.getPassword())) {
             return JsonResult.errorMsg("empty parameter");
@@ -111,13 +117,19 @@ public class PassportController {
         }
 
         try {
-            final Users users = userService.queryUser4Login(userBO.getUserName(), MD5Utils.getMD5Str(userBO.getPassword()));
-            if (null == users) {
+            final Users user = userService.queryUser4Login(userBO.getUserName(), MD5Utils.getMD5Str(userBO.getPassword()));
+            if (null == user) {
                 return JsonResult.errorMsg("wrong password");
             }
 
+            // 设置敏感信息为null
+            setNullProperty(user);
 
-            return JsonResult.ok(users);
+            // 设置cookie
+            CookieUtils.setCookie(request, response,
+                    "user", JsonUtils.objectToJson(user), true);
+
+            return JsonResult.ok(user);
         } catch(Exception e) {
             return JsonResult.errorMsg(e.getMessage());
         }
@@ -127,4 +139,17 @@ public class PassportController {
     }
 
 
+
+    /**
+     * 敏感信息设置为null, 给cookie
+     * @param user
+     */
+    private void setNullProperty(Users user) {
+        user.setPassword(null);
+        user.setMobile(null);
+        user.setEmail(null);
+        user.setCreatedTime(null);
+        user.setUpdatedTime(null);
+        user.setBirthday(null);
+    }
 }
