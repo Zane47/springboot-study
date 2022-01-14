@@ -1741,25 +1741,223 @@ localhost:8088/passport/regist
 
 ## 基于Swagger2的API文档
 
+降低编写接口文档的时间, 通过代码生成文档API提供给前端人员
+
+ps: Apifox: postman + swagger + mock
+
+---
+
+1. 引入pom依赖, foodie-dev中
+
+```xml
+<!-- swagger2 配置 -->
+<dependency>
+    <groupId>io.springfox</groupId>
+    <artifactId>springfox-swagger2</artifactId>
+    <version>2.4.0</version>
+</dependency>
+<dependency>
+    <groupId>io.springfox</groupId>
+    <artifactId>springfox-swagger-ui</artifactId>
+    <version>2.4.0</version>
+</dependency>
+<dependency>
+    <groupId>com.github.xiaoymin</groupId>
+    <artifactId>swagger-bootstrap-ui</artifactId>
+    <version>1.6</version>
+</dependency>
+```
+
+2. 配置类
+
+foodie-dev-api中
+
+```java
+package com.imooc.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import springfox.documentation.builders.ApiInfoBuilder;
+import springfox.documentation.builders.PathSelectors;
+import springfox.documentation.builders.RequestHandlerSelectors;
+import springfox.documentation.service.ApiInfo;
+import springfox.documentation.service.Contact;
+import springfox.documentation.spi.DocumentationType;
+import springfox.documentation.spring.web.plugins.Docket;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
+
+/**
+ * swagger2相关配置
+ *
+ * http://localhost:8088/swagger-ui.html     原路径
+ * http://localhost:8088/doc.html     原路径
+ */
+@Configuration
+// 开启swagger2
+@EnableSwagger2
+public class Swagger2Config {
 
 
+    // 配置swagger2核心配置, docket
+    @Bean
+    public Docket createRestApi() {
+        // 响应式编程风格
+
+        return new Docket(DocumentationType.SWAGGER_2) // 指定api类型为swagger2
+                // 定义api文档汇总信息
+                .apiInfo(apiInfo())
+                .select()
+                // 扫描包所在地址指定controller包. 选择器
+                .apis(RequestHandlerSelectors.basePackage("com.imooc.controller"))
+                // 所有controller
+                .paths(PathSelectors.any())
+                .build();
+    }
+
+    /**
+     * 定义api文档汇总信息
+     *
+     * @return ApiInfo
+     */
+    private ApiInfo apiInfo() {
+        return new ApiInfoBuilder()
+                .title("foodie-dev api")        // 文档页标题
+                .contact(new Contact("imooc",
+                        "https://www.imooc.com",
+                        "abc@imooc.com"))        // 联系人信息
+                .description("foodie-dev api dec")  // 详细信息
+                .version("1.0.1")   // 文档版本号
+                .termsOfServiceUrl("https://www.imooc.com") // 网站地址
+                .build();
+    }
+}
+```
+
+浏览器访问: `http://localhost:8088/swagger-ui.html`, 官方提供的网址
+
+![image-20220114124442147](img/foodie-study/image-20220114124442147.png)
+
+xml中依赖了github自定义的swagger2, -> `http://localhost:8088/doc.html`, 修改页面风格
+
+---
+
+自定义优化swagger2显示
+
+1. @ApiIgnore忽略不需要显示的类
+
+```java
+@RestController
+@ApiIgnore
+public class StuDemoController {}
+```
+
+```java
+@RestController
+@ApiIgnore
+public class HelloController {}
+```
+
+![image-20220114142009268](img/foodie-study/image-20220114142009268.png)
 
 
+2.@Api用在请求类上做说明
 
+```java
+@Api(value = "register and login", tags = {"apis for register and login"})
+@RestController
+@RequestMapping("passport")
+public class PassportController {}
+```
 
+<img src="img/foodie-study/image-20220114142024743.png" alt="image-20220114142024743" style="zoom:67%;" />
 
+3. @ApiOperation用在请求的方法上，说明方法的用途、作用
 
+![image-20220114142718471](img/foodie-study/image-20220114142718471.png)
 
+路由名称修改.
 
+```java
+@ApiOperation(value = "whether user name is existed",
+              notes = "whether user name is existed", httpMethod = "GET")
+@GetMapping("/userNameIsExisted")
+public JSONResult userNameIsExisted(@RequestParam String userName) {}
+```
 
+<img src="img/foodie-study/image-20220114143432844.png" alt="image-20220114143432844" style="zoom: 50%;" />
 
+```java
+@ApiOperation(value = "register", notes = "register user", httpMethod = "POST")
+@PostMapping("/regist")
+public JSONResult regist(@RequestBody UserBO userBO) {}
+```
 
+<img src="img/foodie-study/image-20220114143415009.png" alt="image-20220114143415009" style="zoom:67%;" />
 
+4. @ApiModel和@ApiModelProperty
 
+![image-20220114143652762](img/foodie-study/image-20220114143652762.png)
 
+```java
+@ApiModel(value = "user business object",
+        description = "From client, the data passed in by the user is formed in this entity")
+public class UserBO {
+    @ApiModelProperty(value = "user name", name = "userName",
+            example = "imooc", required = true)
+    private String userName;
 
+    @ApiModelProperty(value = "password", name = "password, md5",
+            example = "imooc", required = true)
+    private String password;
 
+    @ApiModelProperty(value = "confirmed password", name = "confirmedPassword, md5",
+            example = "123456", required = true)
+    private String confirmedPassword;
+}
+```
 
+![image-20220114144233729](img/foodie-study/image-20220114144233729.png)
+
+---
+
+总结: 
+
+```
+@Api：用在请求的类上，表示对类的说明
+    tags="说明该类的作用，可以在UI界面上看到的注解"
+    value="该参数没什么意义，在UI界面上也看到，所以不需要配置"
+
+@ApiOperation：用在请求的方法上，说明方法的用途、作用
+    value="说明方法的用途、作用"
+    notes="方法的备注说明"
+
+@ApiImplicitParams：用在请求的方法上，表示一组参数说明
+    @ApiImplicitParam：用在@ApiImplicitParams注解中，指定一个请求参数的各个方面
+        name：参数名
+        value：参数的汉字说明、解释
+        required：参数是否必须传
+        paramType：参数放在哪个地方
+            · header --> 请求参数的获取：@RequestHeader
+            · query --> 请求参数的获取：@RequestParam
+            · path（用于restful接口）--> 请求参数的获取：@PathVariable
+            · body（不常用）
+            · form（不常用）    
+        dataType：参数类型，默认String，其它值dataType="Integer"       
+        defaultValue：参数的默认值
+
+@ApiResponses：用在请求的方法上，表示一组响应
+    @ApiResponse：用在@ApiResponses中，一般用于表达一个错误的响应信息
+        code：数字，例如400
+        message：信息，例如"请求参数没填好"
+        response：抛出异常的类
+
+@ApiModel：用于响应类上，表示一个返回响应数据的信息
+            （这种一般用在post创建的时候，使用@RequestBody这样的场景，
+            请求参数无法使用@ApiImplicitParam注解进行描述的时候）
+    @ApiModelProperty：用在属性上，描述响应类的属性
+    
+@ApiIgnore: 当前类不需要显示
+```
 
 
 

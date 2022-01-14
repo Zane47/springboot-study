@@ -4,11 +4,14 @@ import com.imooc.pojo.Users;
 import com.imooc.pojo.bo.UserBO;
 import com.imooc.service.UserService;
 import com.imooc.utils.JSONResult;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+@Api(value = "register and login", tags = {"apis for register and login"})
 @RestController
 @RequestMapping("passport")
 public class PassportController {
@@ -22,6 +25,8 @@ public class PassportController {
      * @param userName
      * @return 状态码
      */
+    @ApiOperation(value = "check user name is existed",
+            notes = "whether user name is existed", httpMethod = "GET")
     @GetMapping("/userNameIsExisted")
     public JSONResult userNameIsExisted(@RequestParam String userName) {
         // 判空
@@ -46,6 +51,7 @@ public class PassportController {
      * @param userBO 前端输入数据
      * @return users
      */
+    @ApiOperation(value = "register", notes = "register user", httpMethod = "POST")
     @PostMapping("/regist")
     public JSONResult regist(@RequestBody UserBO userBO) {
         // ------------------------ 校验 ------------------------
