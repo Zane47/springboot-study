@@ -81,4 +81,25 @@ public class UserServiceImpl implements UserService {
     }
 
 
+    /**
+     * 查询用户, 用于登陆
+     *
+     * @param userName userName
+     * @param password 密码密文
+     * @return users
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public Users queryUser4Login(String userName, String password) {
+
+        Example example = new Example(Users.class);
+
+        Example.Criteria criteria = example.createCriteria();
+        criteria.andEqualTo("username", userName);
+        criteria.andEqualTo("password", password);
+
+        return usersMapper.selectOneByExample(example);
+    }
+
+
 }

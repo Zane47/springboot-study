@@ -2,9 +2,11 @@
 
 前端代码 
 
+1. 拷贝到apache-tomcat\webapps中
 
+2. bin中的startup.bat启动tomcat
 
-
+3. `http://localhost:8080/foodie-shop`
 
 
 

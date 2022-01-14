@@ -1989,7 +1989,7 @@ startup.bat
 
 3. 浏览器访问
 
-`http://localhost:8080/foodie-shop|`
+`http://localhost:8080/foodie-shop`
 
 F12可以看到报错, 后续需要修改
 
@@ -2095,37 +2095,125 @@ public class CorsConfig {
 
 ![image-20220114161512287](img/foodie-study/image-20220114161512287.png)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## 登陆
-
-
 
 ### 实现登录
 
+用户输入用户名和密码, 后台进行检索, 如果没有找到数据就报错
+
+1. service层
+
+接口中新增
+
+```java
+/**
+     * 检索用户, 用于登陆
+     */
+public Users queryUser4Login(String userName, String password);
+```
+
+impl
+
+```java
+/**
+     * 查询用户, 用于登陆
+     *
+     * @param userName userName
+     * @param password 密码密文
+     * @return users
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public Users queryUser4Login(String userName, String password) {
+
+    Example example = new Example(Users.class);
+
+    Example.Criteria criteria = example.createCriteria();
+    criteria.andEqualTo("username", userName);
+    criteria.andEqualTo("password", password);
+
+    return usersMapper.selectOneByExample(example);
+}
+```
+
+2. api层
+
+```java
+/**
+     * 用户登陆
+     *
+     * @param userBO
+     * @return
+     */
+@ApiOperation(value = "user login", notes = "user login", httpMethod="POST")
+@PostMapping("/login")
+public JsonResult login(@RequestBody UserBO userBO) {
+    // ------------------------ check ------------------------
+    if (StringUtils.isBlank(userBO.getUserName()) || StringUtils.isBlank(userBO.getPassword())) {
+        return JsonResult.errorMsg("empty parameter");
+    }
+
+    if (!userService.queryUserNameIsExisted(userBO.getUserName())) {
+        return JsonResult.errorMsg("no user, pls register first");
+    }
+
+    try {
+        final Users users = userService.queryUser4Login(userBO.getUserName(), MD5Utils.getMD5Str(userBO.getPassword()));
+        if (null == users) {
+            return JsonResult.errorMsg("wrong password");
+        }
 
 
+        return JsonResult.ok(users);
+    } catch(Exception e) {
+        return JsonResult.errorMsg(e.getMessage());
+    }
+}
+```
 
+可以看到, 在登陆的时候confirmedPassword不需要, 所以UserBO中
 
-
-
-
-
-
+```java
+@ApiModelProperty(value = "confirmed password", name = "confirmedPassword",
+                  example = "123456", required = false)
+private String confirmedPassword;
+```
 
 ## cookie和session
+
+cookie:
+
+- 以键值对的形式存储信息在浏览器.存储在浏览器的缓存, 大小有限制(不超过4kb)
+
+- cookie不能跨域，当前及其父级域名可以取值
+
+
+
+
+
+---
+
+登陆之后的界面中, 仍然没有登陆后的用户信息 -> 前后端一体时, jsp中是后端设置session, 前端jsp拿到相关信息
+
+前后端分离之后, 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

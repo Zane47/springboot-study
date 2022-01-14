@@ -35,7 +35,7 @@
 					<form>
 						<div class="user-name">
 							<label for="user"><i class="am-icon-user"></i></label>
-							<input type="text" v-model="username" id="user" placeholder="请输入用户名">
+							<input type="text" v-model="userName" id="user" placeholder="请输入用户名">
 						</div>
 						<div class="user-pass">
 							<label for="password"><i class="am-icon-lock"></i></label>
@@ -81,7 +81,7 @@
 		var index = new Vue({
 			el: "#login",
 			data: {
-				username: null,
+				userName: null,
 				password: null,
 
 				returnUrl: ""
@@ -101,7 +101,7 @@
 				},
 				doLogin() {
 
-					if (this.username == null || this.username == undefined || this.username == '') {
+					if (this.userName == null || this.userName == undefined || this.userName == '') {
 						alert("用户名不能为空");
 						return;
 					} else if (this.password == null || this.password == undefined || this.password == '') {
@@ -113,7 +113,7 @@
 					}
 
 					var userBO = {
-						username: this.username,
+						userName: this.userName,
 						password: this.password
 					};
 					// console.log(userBO);
