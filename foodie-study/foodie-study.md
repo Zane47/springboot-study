@@ -180,7 +180,7 @@ api不应该直接调用mapper, 应该通过service去操作数据
 
 ## 修改启动项目前务必install
 
-修改代码后需要在foodie-dev中重新install. 类比汽车零件修改后要重新安装
+修改模块的代码后需要在foodie-dev中重新install, 否则找不到对应的方法. 类比汽车零件修改后要重新安装
 
 ![image-20220112103334500](img/foodie-study/image-20220112103334500.png)
 
@@ -2355,6 +2355,7 @@ foodie-dev中
 log4j.rootLogger=DEBUG,stdout,file
 log4j.additivity.org.apache=true
 
+# 控制台输出
 log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 log4j.appender.stdout.threshold=INFO
 log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
@@ -2515,18 +2516,222 @@ INFO  CookieUtils:210 - ========== domainName: localhost ==========
 
 ## 用户退出登录清空cookie
 
-清空cookie即可
+第一阶段: 清空cookie
+
+```java
+/**
+     * logout
+     *
+     * @param request request
+     * @param response response
+     * @return JsonResult
+     */
+@ApiOperation(value = "logout", notes = "user logout", httpMethod = "POST")
+@PostMapping("/logout")
+public JsonResult logout(@RequestParam String userId,
+                         HttpServletRequest request, HttpServletResponse response) {
+
+    // 删除user相关cookie
+    CookieUtils.deleteCookie(request, response, "user");
 
 
+    // TODO 用户退出登录，需要清空购物车
+    // TODO 分布式会话中需要清除用户数据
 
-
-
-
-
-
+    return JsonResult.ok();
+}
+```
 
 ## 开启MyBatis日志Sql打印
 
+在CRUD的时候, 并没有自己写sql, 都是提供好了的mapper方法
+
+这里让控制台打印每次执行的sql语句 -> **注意只适合在开发环境中使用, 生产上请求量多, 并且重复sql语句很多**
+
+foodie-dev-api中的application.yml中添加配置
+
+```yaml
+############################################################
+#
+# mybatis 配置
+#
+############################################################
+mybatis:
+  type-aliases-package: com.imooc.pojo # 所有pojo类(entity)所在的包路径
+  mapper-locations: classpath:mapper/*.xml # mapper映射文件
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+```
+
+查看日志
+
+```
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.UserServiceImpl.queryUserNameIsExisted ====
+Creating a new SqlSession
+Registering transaction synchronization for SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@798974cf]
+INFO  HikariDataSource:110 - DataSourceHikariCP - Starting...
+INFO  HikariDataSource:123 - DataSourceHikariCP - Start completed.
+JDBC Connection [HikariProxyConnection@1170339132 wrapping com.mysql.jdbc.JDBC4Connection@5150ce64] will be managed by Spring
+==>  Preparing: SELECT id,username,password,nickname,realname,face,mobile,email,sex,birthday,created_time,updated_time FROM users WHERE ( ( username = ? ) ) 
+==> Parameters: imooc22(String)
+<==    Columns: id, username, password, nickname, realname, face, mobile, email, sex, birthday, created_time, updated_time
+<==        Row: 220114FBNGX2T9P0, imooc22, 4QrcOUm6Wau+VuBX8g+IPg==, imooc22, null, http://122.152.205.72:88/group1/M00/00/05/CpoxxFw_8_qAIlFXAAAcIhVPdSg994.png, null, null, 2, 1900-01-01, 2022-01-14 20:12:06.0, 2022-01-14 20:12:06.0
+<==      Total: 1
+Releasing transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@798974cf]
+INFO  ServiceLogAspect:64 - ====== proceed end. duration: 799 ms ======
+Transaction synchronization deregistering SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@798974cf]
+Transaction synchronization closing SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@798974cf]
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.UserServiceImpl.queryUser4Login ====
+Creating a new SqlSession
+Registering transaction synchronization for SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1ed38556]
+JDBC Connection [HikariProxyConnection@1336051912 wrapping com.mysql.jdbc.JDBC4Connection@5150ce64] will be managed by Spring
+==>  Preparing: SELECT id,username,password,nickname,realname,face,mobile,email,sex,birthday,created_time,updated_time FROM users WHERE ( ( username = ? and password = ? ) ) 
+==> Parameters: imooc22(String), 4QrcOUm6Wau+VuBX8g+IPg==(String)
+<==    Columns: id, username, password, nickname, realname, face, mobile, email, sex, birthday, created_time, updated_time
+<==        Row: 220114FBNGX2T9P0, imooc22, 4QrcOUm6Wau+VuBX8g+IPg==, imooc22, null, http://122.152.205.72:88/group1/M00/00/05/CpoxxFw_8_qAIlFXAAAcIhVPdSg994.png, null, null, 2, 1900-01-01, 2022-01-14 20:12:06.0, 2022-01-14 20:12:06.0
+<==      Total: 1
+Releasing transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1ed38556]
+INFO  ServiceLogAspect:64 - ====== proceed end. duration: 31 ms ======
+Transaction synchronization deregistering SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1ed38556]
+Transaction synchronization closing SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@1ed38556]
+```
+
+# 首页分类
+
+## 首页电商轮播图
+
+![image-20220114220441003](img/foodie-study/image-20220114220441003.png)
+
+就是这里的轮播图. 由几张图片组成, 首页轮播. -> 用户点击后跳转到页面. 对应数据库表carousel
+
+![image-20220114220802445](img/foodie-study/image-20220114220802445.png)
+
+* 可以点击跳转商品, 或者跳转商品类别
+
+* type: 轮播图类型，用于判断，可以根据商品id或者分类进行页面跳转，r1：商品2：分类
+
+1. Service层
+
+添加接口
+
+```java
+package com.imooc.service;
+
+import com.imooc.pojo.Carousel;
+
+import java.util.List;
+
+public interface CarouselService {
+
+    /**
+     * 查询所有轮播图列表
+     * @param isShow
+     * @return
+     */
+    public List<Carousel> queryAllValidCarousel(Integer isShow);
+}
+```
+
+添加impl
+
+```java
+package com.imooc.service.impl;
+
+import com.imooc.mapper.CarouselMapper;
+import com.imooc.pojo.Carousel;
+import com.imooc.service.CarouselService;
+import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import tk.mybatis.mapper.entity.Example;
+
+import java.util.List;
+
+@Service
+public class CarouselServiceImpl implements CarouselService {
+
+    @Autowired
+    private CarouselMapper carouselMapper;
+
+    /**
+     * 查询所有可显示的轮播图
+     *
+     * @param isShow
+     * @return
+     */
+    @Override
+    public List<Carousel> queryAllValidCarousel(Integer isShow) {
+        Example example = new Example(Carousel.class);
+        // sort顺序属性, 倒序输出
+        example.orderBy("sort").desc();
+
+        Example.Criteria criteria = example.createCriteria();
+        criteria.andEqualTo("isShow", isShow);
+
+        return carouselMapper.selectByExample(example);
+    }
+}
+```
+
+2. controller层
+
+新增枚举类
+
+```java
+package com.imooc.enums;
+
+/**
+ * @Desc: 是否 枚举
+ */
+public enum YesOrNo {
+    NO(0, "否"),
+    YES(1, "是");
+
+    public final Integer type;
+    public final String value;
+
+    YesOrNo(Integer type, String value) {
+        this.type = type;
+        this.value = value;
+    }
+}
+```
+
+controller
+
+```java
+package com.imooc.controller;
+
+
+import com.imooc.enums.YesOrNo;
+import com.imooc.pojo.Carousel;
+import com.imooc.service.CarouselService;
+import com.imooc.utils.JsonResult;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@Api(value = "index", tags = {"index apis"})
+@RequestMapping("index")
+@RestController
+public class IndexController {
+    @Autowired
+    private CarouselService carouselService;
+
+    @ApiOperation(value = "getAllValidCarousel", notes = "getAllValidCarousel", httpMethod = "GET")
+    @GetMapping("/carousel")
+    public JsonResult getAllValidCarousel() {
+        List<Carousel> carousels = carouselService.queryAllValidCarousel(YesOrNo.YES.type);
+
+        return JsonResult.ok(carousels);
+    }
+}
+```
 
 
 
@@ -2548,8 +2753,13 @@ INFO  CookieUtils:210 - ========== domainName: localhost ==========
 
 
 
+## 首页分类
 
-# 分类实现
+
+
+
+
+
 
 
 
@@ -2560,6 +2770,12 @@ INFO  CookieUtils:210 - ========== domainName: localhost ==========
 
 
 # 商品推荐
+
+
+
+
+
+
 
 
 
