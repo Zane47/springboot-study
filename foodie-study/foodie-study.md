@@ -2775,23 +2775,378 @@ father: 上级分类id
 
 ###  加载与渲染大分类
 
+查看前端代码的渲染分类方法renderCategorys(). 
+
+懒加载逻辑: 如果该节点下没有内容，则发起请求查询子分类并且渲染到页面，如果有的话就不查询了（懒加载模式）
+
+```javascript
+renderCategorys() {
+    var serverUrl = app.serverUrl;
+
+    // 获得商品分类 - 大分类
+    axios.get(
+        serverUrl + '/index/cats', {})
+        .then(res => {
+
+        if (res.data.status == 200) {
+            var categoryList = res.data.data
+            this.categoryList = categoryList;
+
+            var rootCatHtml = "";
+            for (var i = 0; i < categoryList.length; i++) {
+
+                var cat = categoryList[i];
+                rootCatHtml += '' +'<li class="appliance js_toggle relative">' +'<div class="category-info">' +'<h3 class="category-name b-category-name">' +'<i><img src="' + cat.logo + '"></i>' +'<a class="ml-22" title="' + cat.name + '">' + cat.name + '</a>' +'</h3>' +'<em>&gt;</em></div>' +'<div class="menu-item menu-in top">' +'<div class="area-in">' +'<div class="area-bg">' +'<div class="menu-srot">' +'<div class="sort-side" rootCatId="' + cat.id + '"></div>' +'</div>' +'</div>' +'</div>' +'</div>' +'<b class="arrow"></b>' +'</li>';
+            }
+            var $leftNav = $('#js_climit_li');
+            $leftNav.html(rootCatHtml);
+
+            $("li").hover(function () {
+                // debugger;
+                $(".category-content .category-list li.first .menu-in").css("display","none");
+                $(".category-content .category-list li.first").removeClass("hover");
+
+                var meLi = $(this);
+
+                var subWapper = $(this).children("div.menu-in").children("div.area-in")
+                .children("div.area-bg").children("div.menu-srot").children("div.sort-side");
+                // console.log(subWapper.html());
+                var subCatHtml = subWapper.html();
+                var rootCatId = subWapper.attr("rootCatId");
+                // console.log(rootCatId);
+                // 如果该节点下没有内容，则发起请求查询子分类并且渲染到页面，如果有的话就不查询了（懒加载模式）
+                if (subCatHtml == null || subCatHtml == '' || subCatHtml == undefined) {
+                    if (rootCatId != undefined && rootCatId != null && rootCatId != '') {
+                        // 根据root分类id查询该分类下的所有子分类
+                        axios.get(
+                            serverUrl + '/index/subCat/' + rootCatId, {})
+                            .then(res => {
+                            if (res.data.status == 200) {
+                                var catList = res.data.data
+                                // this.catList = catList;
+                                // debugger;
+                                var subRenderHtml = '';
+                                for (var i = 0; i < catList.length; i++) {
+                                    var cat = catList[i];
+                                    subRenderHtml += '' +
+                                        '<dl class="dl-sort">' +
+                                        '<dt><span title="' + cat.name + '">' +
+                                        cat.name + '</span></dt>';
+
+                                    // 拼接第三级分类
+                                    var subCatList = cat.subCatList;
+                                    for (var j = 0; j < subCatList.length; j++) {
+                                        var subCat = subCatList[j];
+                                        subRenderHtml += '<dd><a title="' + subCat
+                                            .subName + '" href="catItems.html?searchType=catItems&catId='+ subCat.subId +'" target="_blank"><span>' +
+                                            subCat.subName + '</span></a></dd>'
+                                    }
+
+                                    subRenderHtml += '</dl>';
+                                }
+                                subWapper.html(subRenderHtml);
+                                meLi.addClass("hover");
+                                meLi.children("div.menu-in").css("display",
+                                                                 "block");
+                            }
+                        });
+                    }
+                    // var renderHtml = '' 
+                    // 	+ '<dl class="dl-sort">'
+                    // 		+ '<dt><span title="大包装">大包装</span></dt>'
+                    // 		+ '<dd><a title="蒸蛋糕" href="#"><span>蒸蛋糕</span></a></dd>'
+                    // 		+ '<dd><a title="脱水蛋糕" href="#"><span>脱水蛋糕</span></a></dd>'
+                    // 		+ '<dd><a title="瑞士卷" href="#"><span>瑞士卷</span></a></dd>'
+                    // 		+ '<dd><a title="软面包" href="#"><span>软面包</span></a></dd>'
+                    // 		+ '<dd><a title="马卡龙" href="#"><span>马卡龙</span></a></dd>'
+                    // 		+ '<dd><a title="千层饼" href="#"><span>千层饼</span></a></dd>'
+                    // 		+ '<dd><a title="甜甜圈" href="#"><span>甜甜圈</span></a></dd>'
+                    // 		+ '<dd><a title="蒸三明治" href="#"><span>蒸三明治</span></a></dd>'
+                    // 		+ '<dd><a title="铜锣烧" href="#"><span>铜锣烧</span></a></dd>'
+                    // 	+ '</dl>'
+                    // 	+ '<dl class="dl-sort">'
+                    // 		+ '<dt><span title="两件套">两件套</span></dt>'
+                    // 		+ '<dd><a title="蒸蛋糕" href="#"><span>蒸蛋糕</span></a></dd>'
+                    // 		+ '<dd><a title="脱水蛋糕" href="#"><span>脱水蛋糕</span></a></dd>'
+                    // 		+ '<dd><a title="瑞士卷" href="#"><span>瑞士卷</span></a></dd>'
+                    // 		+ '<dd><a title="软面包" href="#"><span>软面包</span></a></dd>'
+                    // 		+ '<dd><a title="马卡龙" href="#"><span>马卡龙</span></a></dd>'
+                    // 		+ '<dd><a title="千层饼" href="#"><span>千层饼</span></a></dd>'
+                    // 		+ '<dd><a title="甜甜圈" href="#"><span>甜甜圈</span></a></dd>'
+                    // 		+ '<dd><a title="蒸三明治" href="#"><span>蒸三明治</span></a></dd>'
+                    // 		+ '<dd><a title="铜锣烧" href="#"><span>铜锣烧</span></a></dd>'
+                    // 	+ '</dl>';
+                    // 	$(this)
+                    // 		.children("div.menu-in")
+                    // 		.children("div.area-in")
+                    // 		.children("div.area-bg")
+                    // 		.children("div.menu-srot")
+                    // 		.children("div.sort-side")
+                    // 		.html(renderHtml);
+                } else {
+                    $(this).addClass("hover");
+                    $(this).children("div.menu-in").css("display", "block");
+                }
+
+                // $(this).addClass("hover");
+                // $(this).children("div.menu-in").css("display", "block")
+            }, function () {
+                $(this).removeClass("hover")
+                $(this).children("div.menu-in").css("display", "none")
+            });
+            this.renderSixNewItems();
+        }
+    });
+},
+```
+
+循环渲染拼接, 得到根/index/cats -> 得到subcat, /index/subCat/ + rootCatId -> 拼接三级
+
+最大的分类, category表type为1
+
+1. Service层, CategoryService
+
+接口
+
+```java
+package com.imooc.service;
+
+import com.imooc.pojo.Category;
+
+import java.util.List;
+
+/**
+ * 首页分类相关服务
+ */
+public interface CategoryService {
+    /**
+     * 查询所有一级分类, type = 1
+     */
+    public List<Category> queryAllRootCategories();
+}
+```
+
+impl
+
+```java
+package com.imooc.service.impl;
+
+import com.imooc.mapper.CategoryMapper;
+import com.imooc.pojo.Category;
+import com.imooc.service.CategoryService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import tk.mybatis.mapper.entity.Example;
+
+import java.util.List;
+
+@Service
+public class CategoryServiceImpl implements CategoryService {
+
+    @Autowired
+    private CategoryMapper categoryMapper;
+
+    /**
+     * 查询所有一级分类, type = 1
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public List<Category> queryAllRootCategories() {
+        Example example = new Example(Category.class);
+
+        Example.Criteria criteria = example.createCriteria();
+        criteria.andEqualTo("type", "1");
+
+        return categoryMapper.selectByExample(example);
+    }
+}
+```
+
+2. api层
+
+IndexController中
+
+```java
+@Autowired
+private CategoryService categoryService;
 
 
+/**
+     * 查询所有的根目录, type = 1
+     */
+@ApiOperation(value = "getAllRootCategories", notes = "getAllRootCategories", httpMethod = "GET")
+@GetMapping("cats")
+public JsonResult getAllRootCategories() {
+    List<Category> categories = categoryService.queryAllRootCategories();
+
+    return JsonResult.ok(categories);
+}
+```
 
 
+浏览器get请求测试: `http://localhost:8088/index/cats`
+```json
+{
+    "status": 200,
+    "msg": "OK",
+    "data": [
+        {
+            "id": 1,
+            "name": "甜点/蛋糕",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/cake.png",
+            "slogan": "每一道甜品都能打开你的味蕾",
+            "catImage": "http://122.152.205.72:88/foodie/category/cake.png",
+            "bgColor": "#fe7a65"
+        },
+        {
+            "id": 2,
+            "name": "饼干/膨化",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/cookies.png",
+            "slogan": "嘎嘣脆，一听到声音就开吃",
+            "catImage": "http://122.152.205.72:88/foodie/category/cookies.png",
+            "bgColor": "#f59cec"
+        },
+        {
+            "id": 3,
+            "name": "熟食/肉类",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/meat.png",
+            "slogan": "食肉者最爱绝佳美食",
+            "catImage": "http://122.152.205.72:88/foodie/category/meat.png",
+            "bgColor": "#b474fe"
+        },
+        {
+            "id": 4,
+            "name": "素食/卤味",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/luwei.png",
+            "slogan": "香辣甜辣麻辣，辣了才有味",
+            "catImage": "http://122.152.205.72:88/foodie/category/duck.png",
+            "bgColor": "#82ceff"
+        },
+        {
+            "id": 5,
+            "name": "坚果/炒货",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/jianguo.png",
+            "slogan": "酥脆无比，休闲最佳",
+            "catImage": "http://122.152.205.72:88/foodie/category/nut.png",
+            "bgColor": "#c6a868"
+        },
+        {
+            "id": 6,
+            "name": "糖果/蜜饯",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/sweet.png",
+            "slogan": "甜味是爱美者的最爱",
+            "catImage": "http://122.152.205.72:88/foodie/category/mango.png",
+            "bgColor": "#6bdea7"
+        },
+        {
+            "id": 7,
+            "name": "巧克力",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/chocolate.png",
+            "slogan": "美容养颜，男女都爱",
+            "catImage": "http://122.152.205.72:88/foodie/category/chocolate.png",
+            "bgColor": "#f8c375"
+        },
+        {
+            "id": 8,
+            "name": "海鲜/海味",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/lobster.png",
+            "slogan": "吃货们怎么能少了海鲜呢？",
+            "catImage": "http://122.152.205.72:88/foodie/category/crab.png",
+            "bgColor": "#84affe"
+        },
+        {
+            "id": 9,
+            "name": "花茶/果茶",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/tea.png",
+            "slogan": "绿茶红茶怎能少得了",
+            "catImage": "http://122.152.205.72:88/foodie/category/tea.png",
+            "bgColor": "#ff9229"
+        },
+        {
+            "id": 10,
+            "name": "生鲜/蔬果",
+            "type": 1,
+            "fatherId": 0,
+            "logo": "img/food.png",
+            "slogan": "新鲜少不了，每日蔬果生鲜",
+            "catImage": "http://122.152.205.72:88/foodie/category/meat2.png",
+            "bgColor": "#6cc67c"
+        }
+    ]
+}
+```
 
+查看前台的页面
 
+一级分类的展示完成
 
+<img src="img/foodie-study/image-20220116230342762.png" alt="image-20220116230342762" style="zoom:50%;" />
 
 ### 自连接查询子分类
 
+执行第二次查询, 用户鼠标移动到目录的item上(主分类的id, 对应就是子分类的father_id), 展示子分类
 
+<img src="img/foodie-study/image-20220116231028567.png" alt="image-20220116231028567" style="zoom:50%;" />
 
+所有的分类数据都在一张表中 -> 自连接sql
 
+现在项目中的通用mapper做不到多表查询. 只支持单张表.
 
+```mysql
+select * from category f left join category c on f.id = c.father_id where f.father_id = 1;
+```
 
+![image-20220116231453269](img/foodie-study/image-20220116231453269.png)
+
+前半部分二级分类和后半部分三级分类
+
+LEFT JOIN 关键字从左表（table1）返回所有的行，即使右表（table2）中没有匹配。如果右表中没有匹配，则结果为 NULL。
+
+显示前端需要的内容
+
+```mysql
+select f.id        as id,
+       f.name      as name,
+       f.type      as type,
+       f.father_id as fatherId,
+       c.id        as subId,
+       c.name      as subName,
+       c.type      as subType,
+       c.father_id as subFatherId
+from category f
+         left join category c on f.id = c.father_id
+where f.father_id = 1;
+```
+
+![image-20220116232127020](img/foodie-study/image-20220116232127020.png)
 
 ### 自定义mapper实现懒加载子分类展示
+
+
+
+
+
+
 
 
 
