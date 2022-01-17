@@ -1957,6 +1957,11 @@ public class UserBO {
     @ApiModelProperty：用在属性上，描述响应类的属性
     
 @ApiIgnore: 当前类不需要显示
+
+@ApiParam: 请求参数说明. 
+           name : 参数名称
+           value : 参数说明 
+           required : 参数是否必须
 ```
 
 
@@ -1984,7 +1989,7 @@ tomcat9版本
 2. bin中启动tomcat
 
 ```
-startup.bat
+双击startup.bat
 ```
 
 3. 浏览器访问
@@ -3239,6 +3244,7 @@ public class SubCategoryVO {
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.imooc.mapper.CategoryMapperCustom">
+
     <resultMap id="myCategoryVO" type="com.imooc.pojo.vo.CategoryVO">
         <id column="id" property="id"/>
         <result column="name" property="name"/>
@@ -3250,7 +3256,7 @@ public class SubCategoryVO {
           property：对应三级分类的list属性名
           ofType：集合的类型，三级分类的vo
         -->
-        <collection property="subCatList" ofType="com.imooc.pojo.vo.SubCategoryVO">
+        <collection property="subCategoryList" ofType="com.imooc.pojo.vo.SubCategoryVO">
             <id column="subId" property="subId"/>
             <result column="subName" property="subName"/>
             <result column="subType" property="subType"/>
@@ -3260,48 +3266,191 @@ public class SubCategoryVO {
 
     <select id="getSubCategoryList" resultMap="myCategoryVO" parameterType="int">
         SELECT f.id        as id,
-               f.name      as name,
-               f.type      as type,
-               f.father_id as fatherId,
-               c.id        as subId,
-               c.name      as subName,
-               c.type      as subType,
-               c.father_id as subFatherId
+        f.name      as name,
+        f.type      as type,
+        f.father_id as fatherId,
+        c.id        as subId,
+        c.name      as subName,
+        c.type      as subType,
+        c.father_id as subFatherId
         FROM category f
-                 LEFT JOIN
-             category c
-             on
-                 f.id = c.father_id
+        LEFT JOIN
+        category c
+        on
+        f.id = c.father_id
         WHERE f.father_id = #{rootCatId}
     </select>
 </mapper>
 ```
 
+5. foodie-dev-service中CategoryService
 
+接口CategoryService
 
+```java
+/**
+     * 根据一级分类id查询子分类信息
+     */
+public List<CategoryVO> getSubCategoryList(Integer rootCategoryId);
+```
 
+impl
 
+```java
+@Autowired
+private CategoryMapperCustom categoryMapperCustom;
 
+/**
+     * 根据一级分类id查询子分类信息
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public List<CategoryVO> getSubCategoryList(Integer rootCategoryId) {
+    return categoryMapperCustom.getSubCategoryList(rootCategoryId);
+}
+```
 
+调用自定义的mapper
 
+6. foodie-dev-api层
 
+```java
+/**
+     * 获取商品子分类, 根据根目录
+     */
+@ApiOperation(value = "getSubCategory", notes = "getSubCategoriesByRootId", httpMethod = "GET")
+@GetMapping("/subCat/{rootCategoryId}")
+public JsonResult getSubCategoriesByRootId(
+    @ApiParam(name = "rootCategoryId", value = "RootCategoryId", required = true)
+    @PathVariable Integer rootCategoryId) {
+    if (rootCategoryId == null) {
+        return JsonResult.errorMsg("wrong category root id");
+    }
 
+    List<CategoryVO> subCategoryList = categoryService.getSubCategoryList(rootCategoryId);
 
+    return JsonResult.ok(subCategoryList);
+}
+```
 
+前端传过来的是路径参数的方式, 所以这里使用路径参数的形式接收参数
 
+```javascript
+axios.get(serverUrl + '/index/subCat/' + rootCatId, {})
+```
 
+浏览器测试:`http://localhost:8088/index/subCat/1`
 
+```json
+{
+    "status": 200,
+    "msg": "OK",
+    "data": [
+        {
+            "id": 11,
+            "name": "蛋糕",
+            "type": "2",
+            "fatherId": 1,
+            "subCategoryList": [
+                {
+                    "subId": 37,
+                    "subName": "蒸蛋糕",
+                    "subType": "3",
+                    "subFatherId": 11
+                },
+                {
+                    "subId": 38,
+                    "subName": "软面包",
+                    "subType": "3",
+                    "subFatherId": 11
+                },
+                {
+                    "subId": 39,
+                    "subName": "脱水蛋糕",
+                    "subType": "3",
+                    "subFatherId": 11
+                },
+                {
+                    "subId": 40,
+                    "subName": "马卡龙",
+                    "subType": "3",
+                    "subFatherId": 11
+                },
+                {
+                    "subId": 41,
+                    "subName": "甜甜圈",
+                    "subType": "3",
+                    "subFatherId": 11
+                },
+                {
+                    "subId": 42,
+                    "subName": "三明治",
+                    "subType": "3",
+                    "subFatherId": 11
+                },
+                {
+                    "subId": 43,
+                    "subName": "铜锣烧",
+                    "subType": "3",
+                    "subFatherId": 11
+                }
+            ]
+        },
+        {
+            "id": 12,
+            "name": "点心",
+            "type": "2",
+            "fatherId": 1,
+            "subCategoryList": [
+                {
+                    "subId": 44,
+                    "subName": "肉松饼",
+                    "subType": "3",
+                    "subFatherId": 12
+                },
+                {
+                    "subId": 45,
+                    "subName": "华夫饼",
+                    "subType": "3",
+                    "subFatherId": 12
+                },
+                {
+                    "subId": 46,
+                    "subName": "沙琪玛",
+                    "subType": "3",
+                    "subFatherId": 12
+                },
+                {
+                    "subId": 47,
+                    "subName": "鸡蛋卷",
+                    "subType": "3",
+                    "subFatherId": 12
+                },
+                {
+                    "subId": 48,
+                    "subName": "蛋饼",
+                    "subType": "3",
+                    "subFatherId": 12
+                },
+                {
+                    "subId": 49,
+                    "subName": "凤梨酥",
+                    "subType": "3",
+                    "subFatherId": 12
+                },
+                {
+                    "subId": 50,
+                    "subName": "手撕面包",
+                    "subType": "3",
+                    "subFatherId": 12
+                }
+            ]
+        }
+    ]
+}
+```
 
-
-
-
-
-
-
-
-
-
-
+![image-20220117143322147](img/foodie-study/image-20220117143322147.png)
 
 # 商品推荐
 

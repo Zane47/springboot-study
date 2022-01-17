@@ -229,6 +229,8 @@ public class ParamController {
 
 ## 参数接收
 
+### Get
+
 @RequestParam. 参数默认, 与函数签名的参数一致
 
 @RequestParam(value = "n"). 参数为n
@@ -255,6 +257,55 @@ public Float getCoursePrice(Integer courseId) {
 ````
 
 `http://localhost:8082/price?courseId=364`
+
+---
+
+### Post
+
+#### 普通接收
+
+```java
+@PostMapping("/hello")
+public String hello(@RequestParam(name = "name", defaultValue = "xxx") String name,
+                    @RequestParam(name = "age", required = false) Integer age) {
+    return "name：" + name + "\nage：" + age;
+}
+```
+
+* 使用 required = false 标注参数是非必须的。
+* 使用 defaultValue 给参数指定个默认值。
+
+---
+
+#### JSON
+
+如果和前台定义好了由前端传过来的数据, (一张表单) 将前端页面中的用户名, 密码, 确认密码等数据包装成一个JSON发到后端, 一个偏向业务类型的数据包, 所以这里统一定义为BO对象. 用来接收前端传递的数据体.
+
+Post的接收: @RequestBody
+
+```java
+@PostMapping("/regist")
+public JsonResult regist(@RequestBody UserBO userBO) {}
+```
+
+#### map接收参数
+
+```java
+@PostMapping("/hello")
+public String hello(@RequestParam Map<String,Object> params) {
+    return "name：" + params.get("name") + "\nage：" + params.get("age");
+}
+```
+
+
+
+
+
+
+
+
+
+
 
 ## 参数写到url中
 

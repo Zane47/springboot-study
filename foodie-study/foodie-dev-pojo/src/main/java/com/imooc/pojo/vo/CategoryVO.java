@@ -18,6 +18,6 @@ public class CategoryVO {
     private Integer fatherId;
 
     // 三级分类vo list
-    private List<SubCategoryVO> subCatList;
+    private List<SubCategoryVO> subCategoryList;
 
 }

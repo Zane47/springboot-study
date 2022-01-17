@@ -10,8 +10,10 @@ import com.imooc.service.CategoryService;
 import com.imooc.utils.JsonResult;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -64,8 +66,14 @@ public class IndexController {
     /**
      * 获取商品子分类, 根据根目录
      */
+    @ApiOperation(value = "getSubCategory", notes = "getSubCategoriesByRootId", httpMethod = "GET")
     @GetMapping("/subCat/{rootCategoryId}")
-    public JsonResult getSubCategoriesByRootId(Integer rootCategoryId) {
+    public JsonResult getSubCategoriesByRootId(
+            @ApiParam(name = "rootCategoryId", value = "RootCategoryId", required = true)
+            @PathVariable Integer rootCategoryId) {
+        if (rootCategoryId == null) {
+            return JsonResult.errorMsg("wrong category root id");
+        }
 
         List<CategoryVO> subCategoryList = categoryService.getSubCategoryList(rootCategoryId);
 
