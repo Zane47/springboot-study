@@ -1,21 +1,23 @@
 package com.imooc.controller;
 
 
+import com.imooc.aspect.ServiceLogAspect;
 import com.imooc.enums.YesOrNo;
 import com.imooc.pojo.Carousel;
 import com.imooc.pojo.Category;
 import com.imooc.pojo.vo.CategoryVO;
+import com.imooc.pojo.vo.NewItemsVO;
 import com.imooc.service.CarouselService;
 import com.imooc.service.CategoryService;
 import com.imooc.utils.JsonResult;
+import com.imooc.utils.JsonUtils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -23,6 +25,8 @@ import java.util.List;
 @RequestMapping("index")
 @RestController
 public class IndexController {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(IndexController.class);
 
 
     @Autowired
@@ -80,5 +84,23 @@ public class IndexController {
         return JsonResult.ok(subCategoryList);
     }
 
+
+    /**
+     * 查询每个一级分类下的最新6条商品数据
+     */
+    @ApiOperation(value = "getSixNewItems", notes = "get 6 items based on the rootCateGoryId", httpMethod = "GET")
+    @GetMapping("/sixNewItems/{rootCategoryId}")
+    public JsonResult getSixNewItems(
+            @ApiParam(name = "rootCategoryId", value = "RootCategoryId", required = true)
+            @PathVariable Integer rootCategoryId) {
+
+        if (rootCategoryId == null) {
+            return JsonResult.errorMsg("wrong category root id");
+        }
+
+        List<NewItemsVO> sixNewItems = categoryService.getSixNewItemsLazy(rootCategoryId);
+        LOGGER.info(JsonUtils.objectToJson(sixNewItems));
+        return JsonResult.ok(sixNewItems);
+    }
 
 }

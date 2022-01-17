@@ -37,13 +37,13 @@
                  f.id = c.father_id
         WHERE f.father_id = #{rootCatId}
     </select>
-    <!--
+
     <resultMap id="myNewItemsVO" type="com.imooc.pojo.vo.NewItemsVO">
-        <id column="rootCatId" property="rootCatId"/>
-        <result column="rootCatName" property="rootCatName"/>
+        <id column="rootCategoryId" property="rootCategoryId"/>
+        <result column="rootCategoryName" property="rootCategoryName"/>
         <result column="slogan" property="slogan"/>
-        <result column="catImage" property="catImage"/>
-        <result column="bgColor" property="bgColor"/>
+        <result column="categoryImage" property="categoryImage"/>
+        <result column="backgroundColor" property="backgroundColor"/>
 
         <collection property="simpleItemList" ofType="com.imooc.pojo.vo.SimpleItemVO">
             <id column="itemId" property="itemId"/>
@@ -51,6 +51,27 @@
             <result column="itemUrl" property="itemUrl"/>
         </collection>
     </resultMap>
-    -->
+
+    <select id="getSixNewItemsLazy" resultMap="myNewItemsVO" parameterType="Map">
+        select f.id           as rootCategoryId,
+               f.name         as rootCategoryName,
+               f.slogan       as slogan,
+               f.cat_image    as categoryImage,
+               f.bg_color     as backgroundColor,
+               i.id           as itemId,
+               i.item_name    as itemName,
+               ii.url         as itemUrl,
+               i.created_time as createTime
+        from category f
+                 left join items i on f.id = i.root_cat_id
+                 left join items_img ii on i.id = ii.item_id
+        where f.type = 1
+          and ii.is_main = 1
+          and i.root_cat_id = #{paramsMap.rootCategoryId}
+        order by i.created_time desc
+        limit 0, 6;
+    </select>
+
+
 
 </mapper>

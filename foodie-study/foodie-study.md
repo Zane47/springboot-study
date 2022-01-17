@@ -3454,6 +3454,482 @@ axios.get(serverUrl + '/index/subCat/' + rootCatId, {})
 
 # 商品推荐
 
+## 需求和sql关联查询
+
+首页下方新商品的分类推荐, 不同类别的商品做推荐, 首页下拉的内容.
+
+使用懒加载模式, 在前端判断页面的滚动, 当滚动条触底, 就依次展示下一个类别的商品
+
+前端代码:
+
+```javascript
+<script type="text/javascript">
+    $(window).scroll(
+    function() {
+        // scrollTop为滚动条在Y轴上的滚动距离。
+        // clientHeight为内容可视区域的高度。
+        // scrollHeight为内容可视区域的高度加上溢出（滚动）的距离。
+        var scrollTop = $(this).scrollTop();
+        var scrollHeight = $(document).height();
+        var windowHeight = $(this).height();
+        if (scrollTop + windowHeight > (scrollHeight - 50) ) {
+            // 此处是滚动条到底部时候触发的事件，在这里写要加载的数据，或者是拉动滚动条的操作
+            // console.log("123");
+            index.renderSixNewItems();
+        }
+    });
+</script>
+```
+
+对scroll做监听, 当滚动条达到一定程度之后就会对新加载renderSixNewItems
+
+```javascript
+renderSixNewItems() {
+    var serverUrl = app.serverUrl;
+    var categoryList = this.categoryList;
+    var catIndex = this. ;
+
+    var rootCat = categoryList[catIndex];
+    if (rootCat == undefined || rootCat == null || rootCat == '') {
+        return;
+    }
+    var rootCatId = rootCat.id;
+
+    catIndex++;
+    this.catIndex = catIndex;
+
+    // 获得各个分类下的最新6个商品
+    axios.get(
+        serverUrl + '/index/sixNewItems/' + rootCatId, {})
+        .then(res => {
+        if (res.data.status == 200) {
+            var sixNewItemsListTemp = res.data.data
+            var sixNewItemsList = this.sixNewItemsList;
+            sixNewItemsList.push(sixNewItemsListTemp[0]);
+            this.sixNewItemsList = sixNewItemsList;
+            // console.log(sixNewItemsList);
+            this.isScrolling = false;	// 加载完毕以后表示下次可以继续滚动加载
+        }
+    });
+},
+```
+
+catIndex: 用于懒加载判断每次的幅度
+
+```javascript
+<div v-for="(rootCat, rootIndex) in sixNewItemsList">
+				<!--甜点-->
+				<div class="am-container ">
+					<div class="shopTitle ">
+						<h4>{{rootCat.rootCatName}}</h4>
+						<h3>{{rootCat.slogan}}</h3>
+					</div>
+				</div>
+				<div class="am-g am-g-fixed floodFour">
+					<div class="am-u-sm-5 am-u-md-4 text-one list" :style="'background-color:' + rootCat.bgColor">
+						<a href="javascript:void(0);">
+							<img :src="rootCat.catImage"/>
+						</a>
+						<div class="triangle-topright"></div>
+					</div>
+					<div class="am-u-sm-7 am-u-md-4 text-two sug">
+						<div class="outer-con ">
+							<div class="title ">
+								{{rootCat.simpleItemList[0].itemName}}
+							</div>
+						</div>
+						<a :href="'item.html?itemId=' + rootCat.simpleItemList[0].itemId" target="_blank"><img :src="rootCat.simpleItemList[0].itemUrl" style="width: 170px; height: 170px;"/></a>
+					</div>
+					<div class="am-u-sm-7 am-u-md-4 text-two">
+						<div class="outer-con ">
+							<div class="title ">
+								{{rootCat.simpleItemList[1].itemName}}
+							</div>
+						</div>
+						<a :href="'item.html?itemId=' + rootCat.simpleItemList[1].itemId" target="_blank"><img :src="rootCat.simpleItemList[1].itemUrl" style="width: 170px; height: 170px;"/></a>
+					</div>
+					<div class="am-u-sm-3 am-u-md-2 text-three big" >
+						<div class="outer-con " >
+							<div class="title ">
+								{{rootCat.simpleItemList[2].itemName}}
+							</div>
+						</div>
+						<a :href="'item.html?itemId=' + rootCat.simpleItemList[2].itemId" target="_blank"><img :src="rootCat.simpleItemList[2].itemUrl" style="width: 170px; height: 170px;"/></a>
+					</div>
+					<div class="am-u-sm-3 am-u-md-2 text-three sug">
+						<div class="outer-con ">
+							<div class="title ">
+								{{rootCat.simpleItemList[3].itemName}}
+							</div>
+						</div>
+						<a :href="'item.html?itemId=' + rootCat.simpleItemList[3].itemId" target="_blank"><img :src="rootCat.simpleItemList[3].itemUrl" style="width: 170px; height: 170px;"/></a>
+					</div>
+					<div class="am-u-sm-3 am-u-md-2 text-three ">
+						<div class="outer-con ">
+							<div class="title ">
+								{{rootCat.simpleItemList[4].itemName}}
+							</div>
+						</div>
+						<a :href="'item.html?itemId=' + rootCat.simpleItemList[4].itemId" target="_blank"><img :src="rootCat.simpleItemList[4].itemUrl" style="width: 170px; height: 170px;"/></a>
+					</div>
+					<div class="am-u-sm-3 am-u-md-2 text-three last big ">
+						<div class="outer-con ">
+							<div class="title ">
+								{{rootCat.simpleItemList[5].itemName}}
+							</div>
+						</div>
+						<a :href="'item.html?itemId=' + rootCat.simpleItemList[5].itemId" target="_blank"><img :src="rootCat.simpleItemList[5].itemUrl" style="width: 170px; height: 170px;"/></a>
+					</div>
+				</div>
+				<div class="clear "></div>
+			</div>
+```
+
+然后循环每一个分类下的item, 做展示. 懒加载
+
+items商品表:
+
+```mysql
+-- auto-generated definition
+create table items
+(
+    id            varchar(64) not null comment '商品主键id'
+    primary key,
+    item_name     varchar(32) not null comment '商品名称 商品名称',
+    cat_id        int         not null comment '分类外键id 分类id',
+    root_cat_id   int         not null comment '一级分类外键id',
+    sell_counts   int         not null comment '累计销售 累计销售',
+    on_off_status int         not null comment '上下架状态 上下架状态,1:上架 2:下架',
+    content       text        not null comment '商品内容 商品内容',
+    created_time  datetime    not null comment '创建时间',
+    updated_time  datetime    not null comment '更新时间'
+)
+    comment '商品表 商品信息相关表：分类表，商品图片表，商品规格表，商品参数表' charset = utf8mb4;
+```
+
+cat_id, 分类外键id, 子分类的id, 三级分类id
+
+root_cat_id, 一级外键id, rootid
+
+这里把两个分类的id放在一张表, 就是不需要在做过多的表关联了, 表关联太多了sql性能低下. 
+
+商品图片items_img, 关联items表. is_main: 是否是主图, 商品可能有多个图片, 首页显示的是主图, 点击进入详情页再展示其他的图片
+
+![image-20220117195537407](img/foodie-study/image-20220117195537407.png)
+
+```mysql
+-- 首页分类的最新推荐商品查询
+select f.id   as rootCategoryId,
+       f.name as rootCategoryName,
+       f.slogan as slogan,
+       f.cat_image as categoryImage,
+       f.bg_color as backgroundColor,
+       i.id as itemId,
+       i.item_name as itemName,
+       ii.url as itemUrl,
+       i.created_time as createTime
+from category f
+         left join items i on f.id = i.root_cat_id
+         left join items_img ii on i.id = ii.item_id
+where f.type = 1
+  and ii.is_main = 1
+  and i.root_cat_id = 7
+order by i.created_time desc
+limit 0, 6;
+```
+
+![image-20220117200949920](img/foodie-study/image-20220117200949920.png)
+
+## 代码实现
+
+1. mapper
+
+CategoryMapperCustom中新增方法
+
+这里采用新的方式传递参数, 不仅可以使用String, Integer, Map也可以
+
+```java
+public List<NewItemsVO> getSixNewItemsLazy(@Param("paramsMap") Map<String, Object> map);
+```
+
+pojo层定义NewItemsVO
+
+```java
+/**
+ * 最新商品VO
+ */
+@Getter
+@Setter
+public class NewItemsVO {
+    private Integer rootCategoryId;
+    private String rootCategoryName;
+    private String slogan;
+    private String categoryImage;
+    private String backgroundColor;
+
+    private List<SimpleItemVO> simpleItemList;
+}
+```
+
+SimpleItemVO:
+
+```java
+@Getter
+@Setter
+public class SimpleItemVO {
+    private String itemId;
+    private String itemName;
+    private String itemUrl;
+}
+```
+
+2. mapper.xml
+
+```xml
+<resultMap id="myNewItemsVO" type="com.imooc.pojo.vo.NewItemsVO">
+    <id column="rootCategoryId" property="rootCategoryId"/>
+    <result column="rootCategoryName" property="rootCategoryName"/>
+    <result column="slogan" property="slogan"/>
+    <result column="categoryImage" property="categoryImage"/>
+    <result column="backgroundColor" property="backgroundColor"/>
+
+    <collection property="simpleItemList" ofType="com.imooc.pojo.vo.SimpleItemVO">
+        <id column="itemId" property="itemId"/>
+        <result column="itemName" property="itemName"/>
+        <result column="itemUrl" property="itemUrl"/>
+    </collection>
+</resultMap>
+
+<select id="getSixNewItemsLazy" resultMap="myNewItemsVO" parameterType="Map">
+    select f.id           as rootCategoryId,
+    f.name         as rootCategoryName,
+    f.slogan       as slogan,
+    f.cat_image    as categoryImage,
+    f.bg_color     as backgroundColor,
+    i.id           as itemId,
+    i.item_name    as itemName,
+    ii.url         as itemUrl,
+    i.created_time as createTime
+    from category f
+    left join items i on f.id = i.root_cat_id
+    left join items_img ii on i.id = ii.item_id
+    where f.type = 1
+    and ii.is_main = 1
+    and i.root_cat_id = #{paramsMap.rootCategoryId}
+    order by i.created_time desc
+    limit 0, 6;
+</select>
+```
+
+3. Service层
+
+接口
+
+```java
+/**
+     * 查询首页每个一级分类下的6条最新商品数据
+     */
+public List<NewItemsVO> getSixNewItemsLazy(Integer rootCategoryId);
+```
+
+impl
+
+```java
+/**
+     * 查询首页每个一级分类下的6条最新商品数据
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public List<NewItemsVO> getSixNewItemsLazy(Integer rootCategoryId) {
+    Map<String, Object> paramsMap = new HashMap<>();
+    paramsMap.put("rootCategoryId", rootCategoryId);
+    return categoryMapperCustom.getSixNewItemsLazy(paramsMap);
+}
+```
+
+4. api层
+
+```java
+/**
+     * 查询每个一级分类下的最新6条商品数据
+     */
+@ApiOperation(value = "getSixNewItems", notes = "get 6 items based on the rootCateGoryId", httpMethod = "GET")
+@GetMapping("/sixNewItems/{rootCategoryId}")
+public JsonResult getSixNewItems(
+    @ApiParam(name = "rootCategoryId", value = "RootCategoryId", required = true)
+    @PathVariable Integer rootCategoryId) {
+
+    if (rootCategoryId == null) {
+        return JsonResult.errorMsg("wrong category root id");
+    }
+
+    List<NewItemsVO> sixNewItems = categoryService.getSixNewItemsLazy(rootCategoryId);
+    LOGGER.info(JsonUtils.objectToJson(sixNewItems));
+    return JsonResult.ok(sixNewItems);
+}
+```
+
+## 错误记录
+
+在mapper.xml中, 错误的设置了id的column名字, 导致找不到. 
+
+```xml
+<resultMap id="myNewItemsVO" type="com.imooc.pojo.vo.NewItemsVO">
+    <id column="rootCategoryId" property="rootCategoryId"/>
+    <result column="rootCategoryName" property="rootCategoryName"/>
+    <result column="slogan" property="slogan"/>
+    <result column="categoryImage" property="categoryImage"/>
+    <result column="backgroundColor" property="backgroundColor"/>
+
+    <collection property="simpleItemList" ofType="com.imooc.pojo.vo.SimpleItemVO">
+        <id column="itemId" property="itemId"/>
+        <result column="itemName" property="itemName"/>
+        <result column="itemUrl" property="itemUrl"/>
+    </collection>
+</resultMap>
+```
+
+其中``result column="rootCategoryName"`一开始打错了, 导致找不到对应的column
+
+返回给前台的json变成了: size为6的list
+
+```json
+"status": 200,
+"msg": "OK",
+"data": [
+    {
+        "rootCategoryId": null,
+        "rootCategoryName": "甜点/蛋糕",
+        "slogan": "每一道甜品都能打开你的味蕾",
+        "categoryImage": "http://122.152.205.72:88/foodie/category/cake.png",
+        "backgroundColor": "#fe7a65",
+        "simpleItemList": [
+            {
+                "itemId": "cake-1005",
+                "itemName": "【天天吃货】进口美食凤梨酥",
+                "itemUrl": "http://122.152.205.72:88/foodie/cake-1005/img1.png"
+            }
+        ]
+    },
+    {
+        "rootCategoryId": null,
+        "rootCategoryName": "甜点/蛋糕",
+        "slogan": "每一道甜品都能打开你的味蕾",
+        "categoryImage": "http://122.152.205.72:88/foodie/category/cake.png",
+        "backgroundColor": "#fe7a65",
+        "simpleItemList": [
+            {
+                "itemId": "cake-1006",
+                "itemName": "【天天吃货】机器猫最爱 铜锣烧 最美下午茶",
+                "itemUrl": "http://122.152.205.72:88/foodie/cake-1006/img2.png"
+            }
+        ]
+    },
+    {
+        "rootCategoryId": null,
+        "rootCategoryName": "甜点/蛋糕",
+        "slogan": "每一道甜品都能打开你的味蕾",
+        "categoryImage": "http://122.152.205.72:88/foodie/category/cake.png",
+        "backgroundColor": "#fe7a65",
+        "simpleItemList": [
+            {
+                "itemId": "cake-1001",
+                "itemName": "【天天吃货】真香预警 超级好吃 手撕面包 儿童早餐早饭",
+                "itemUrl": "http://122.152.205.72:88/foodie/cake-1001/img1.png"
+            }
+        ]
+    },
+    {
+        "rootCategoryId": null,
+        "rootCategoryName": "甜点/蛋糕",
+        "slogan": "每一道甜品都能打开你的味蕾",
+        "categoryImage": "http://122.152.205.72:88/foodie/category/cake.png",
+        "backgroundColor": "#fe7a65",
+        "simpleItemList": [
+            {
+                "itemId": "cake-1002",
+                "itemName": "【天天吃货】网红烘焙蛋糕 好吃的蛋糕",
+                "itemUrl": "http://122.152.205.72:88/foodie/cake-1002/img1.png"
+            }
+        ]
+    },
+    {
+        "rootCategoryId": null,
+        "rootCategoryName": "甜点/蛋糕",
+        "slogan": "每一道甜品都能打开你的味蕾",
+        "categoryImage": "http://122.152.205.72:88/foodie/category/cake.png",
+        "backgroundColor": "#fe7a65",
+        "simpleItemList": [
+            {
+                "itemId": "cake-1004",
+                "itemName": "【天天吃货】美味沙琪玛 超棒下午茶",
+                "itemUrl": "http://122.152.205.72:88/foodie/cake-1004/img1.png"
+            }
+        ]
+    },
+    {
+        "rootCategoryId": null,
+        "rootCategoryName": "甜点/蛋糕",
+        "slogan": "每一道甜品都能打开你的味蕾",
+        "categoryImage": "http://122.152.205.72:88/foodie/category/cake.png",
+        "backgroundColor": "#fe7a65",
+        "simpleItemList": [
+            {
+                "itemId": "cake-1003",
+                "itemName": "【天天吃货】超好吃华夫饼 美食诱惑 下午茶",
+                "itemUrl": "http://122.152.205.72:88/foodie/cake-1003/img1.png"
+            }
+        ]
+    }
+]
+```
+
+然而正确的应该是返回, 一个list, 其中的sublist的size是6
+
+```json
+"rootCategoryId": 1,
+"rootCategoryName": "甜点/蛋糕",
+"slogan": "每一道甜品都能打开你的味蕾",
+"categoryImage": "http://122.152.205.72:88/foodie/category/cake.png",
+"backgroundColor": "#fe7a65",
+"simpleItemList": [
+    {
+        "itemId": "cake-1005",
+        "itemName": "【天天吃货】进口美食凤梨酥",
+        "itemUrl": "http://122.152.205.72:88/foodie/cake-1005/img1.png"
+    },
+    {
+        "itemId": "cake-1002",
+        "itemName": "【天天吃货】网红烘焙蛋糕 好吃的蛋糕",
+        "itemUrl": "http://122.152.205.72:88/foodie/cake-1002/img1.png"
+    },
+    {
+        "itemId": "cake-1004",
+        "itemName": "【天天吃货】美味沙琪玛 超棒下午茶",
+        "itemUrl": "http://122.152.205.72:88/foodie/cake-1004/img1.png"
+    },
+    {
+        "itemId": "cake-1006",
+        "itemName": "【天天吃货】机器猫最爱 铜锣烧 最美下午茶",
+        "itemUrl": "http://122.152.205.72:88/foodie/cake-1006/img2.png"
+    },
+    {
+        "itemId": "cake-1001",
+        "itemName": "【天天吃货】真香预警 超级好吃 手撕面包 儿童早餐早饭",
+        "itemUrl": "http://122.152.205.72:88/foodie/cake-1001/img1.png"
+    },
+    {
+        "itemId": "cake-1003",
+        "itemName": "【天天吃货】超好吃华夫饼 美食诱惑 下午茶",
+        "itemUrl": "http://122.152.205.72:88/foodie/cake-1003/img1.png"
+    }
+]
+```
+
+
+
+
+
 
 
 
