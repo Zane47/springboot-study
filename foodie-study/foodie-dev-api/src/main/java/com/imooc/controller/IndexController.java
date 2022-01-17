@@ -4,6 +4,7 @@ package com.imooc.controller;
 import com.imooc.enums.YesOrNo;
 import com.imooc.pojo.Carousel;
 import com.imooc.pojo.Category;
+import com.imooc.pojo.vo.CategoryVO;
 import com.imooc.service.CarouselService;
 import com.imooc.service.CategoryService;
 import com.imooc.utils.JsonResult;
@@ -59,6 +60,17 @@ public class IndexController {
         return JsonResult.ok(categories);
     }
 
+
+    /**
+     * 获取商品子分类, 根据根目录
+     */
+    @GetMapping("/subCat/{rootCategoryId}")
+    public JsonResult getSubCategoriesByRootId(Integer rootCategoryId) {
+
+        List<CategoryVO> subCategoryList = categoryService.getSubCategoryList(rootCategoryId);
+
+        return JsonResult.ok(subCategoryList);
+    }
 
 
 }

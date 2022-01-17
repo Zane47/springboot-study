@@ -2972,7 +2972,6 @@ IndexController中
 @Autowired
 private CategoryService categoryService;
 
-
 /**
      * 查询所有的根目录, type = 1
      */
@@ -3141,6 +3140,152 @@ where f.father_id = 1;
 ![image-20220116232127020](img/foodie-study/image-20220116232127020.png)
 
 ### 自定义mapper实现懒加载子分类展示
+
+相应的内容放到代码中实现, 现在代码中使用的都是通用的mapper, 例如上面的CategoryMapper, 需要自定义mapper, 编写自定义语句.
+
+查看原始的CategoryMapper
+
+```java
+public interface CategoryMapper extends MyMapper<Category> {}
+```
+
+需要自定义该mapper, 做扩展.
+
+1. foodie-dev-mapper层中添加
+
+接口CategoryMapperCustom定义查询子分类的方法
+
+```java
+public interface CategoryMapperCustom {
+    public List<CategoryVO> getSubCategoryList(Integer rootCategoryId);
+}
+```
+
+2. 自定义的CategoryMapperCustom.xml. 先写sql
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.imooc.mapper.CategoryMapperCustom">
+
+    <select id="getSubCategoryList" resultMap="myCategoryVO" parameterType="int">
+        SELECT f.id        as id,
+               f.name      as name,
+               f.type      as type,
+               f.father_id as fatherId,
+               c.id        as subId,
+               c.name      as subName,
+               c.type      as subType,
+               c.father_id as subFatherId
+        FROM category f
+                 LEFT JOIN
+             category c
+             on
+                 f.id = c.father_id
+        WHERE f.father_id = #{rootCatId}
+    </select>
+
+</mapper>
+```
+
+3. foodie-dev-pojo层, 新建vo, 
+
+BO(Business Object): 前端业务层封装的数据传递到后端.
+
+VO(View Object): 内部传出去, 给前端(h5, app, html)的数据
+
+二级分类VO: CategoryVO. 三级分类做成list封装到二级分类中
+
+```java
+package com.imooc.pojo.vo;
+
+/**
+ * 二级分类VO
+ */
+@Getter
+@Setter
+public class CategoryVO {
+    private Integer id;
+    private String name;
+    private String type;
+    private Integer fatherId;
+
+    // 三级分类vo list
+    private List<SubCategoryVO> subCatList;
+}
+```
+
+三级分类VO: SubCategoryVO
+
+```java
+package com.imooc.pojo.vo;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class SubCategoryVO {
+    private Integer subId;
+    private String subName;
+    private String subType;
+    private Integer subFatherId;
+}
+```
+
+4. 自定义mapper中, sql查询出来的内容, 需要对应一个实体, 使用resultMap做映射. CategoryVO
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.imooc.mapper.CategoryMapperCustom">
+    <resultMap id="myCategoryVO" type="com.imooc.pojo.vo.CategoryVO">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="type" property="type"/>
+        <result column="fatherId" property="fatherId"/>
+
+        <!--
+          collection 标签：用于定义关联的list集合类型的封装规则
+          property：对应三级分类的list属性名
+          ofType：集合的类型，三级分类的vo
+        -->
+        <collection property="subCatList" ofType="com.imooc.pojo.vo.SubCategoryVO">
+            <id column="subId" property="subId"/>
+            <result column="subName" property="subName"/>
+            <result column="subType" property="subType"/>
+            <result column="subFatherId" property="subFatherId"/>
+        </collection>
+    </resultMap>
+
+    <select id="getSubCategoryList" resultMap="myCategoryVO" parameterType="int">
+        SELECT f.id        as id,
+               f.name      as name,
+               f.type      as type,
+               f.father_id as fatherId,
+               c.id        as subId,
+               c.name      as subName,
+               c.type      as subType,
+               c.father_id as subFatherId
+        FROM category f
+                 LEFT JOIN
+             category c
+             on
+                 f.id = c.father_id
+        WHERE f.father_id = #{rootCatId}
+    </select>
+</mapper>
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
