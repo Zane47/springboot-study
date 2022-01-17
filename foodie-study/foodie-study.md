@@ -3926,6 +3926,241 @@ public JsonResult getSixNewItems(
 ]
 ```
 
+# 商品详情
+
+## 需求分析
+
+首页点击某个商品后进入商品详情页
+
+![image-20220117222026473](img/foodie-study/image-20220117222026473.png)
+
+切分成多个部分: 
+
+* 商品图片. items_img表中数据, 根据商品id获取
+* 商品信息. items表中的数据. 重要: 累计销售和商品内容
+
+* 商品详情. 图片和文字. 
+
+商品会有不同的规格, 这里对应不同的口味. 不同的商品不同的规格. 对应的价格也不一致. 
+
+-> 对应商品规格表: items_spec
+
+```mysql
+-- auto-generated definition
+create table items_spec
+(
+    id             varchar(64)   not null comment '商品规格id'
+    primary key,
+    item_id        varchar(64)   not null comment '商品外键id',
+    name           varchar(32)   not null comment '规格名称',
+    stock          int           not null comment '库存',
+    discounts      decimal(4, 2) not null comment '折扣力度',
+    price_discount int           not null comment '优惠价',
+    price_normal   int           not null comment '原价',
+    created_time   datetime      not null comment '创建时间',
+    updated_time   datetime      not null comment '更新时间'
+)
+    comment '商品规格 每一件商品都有不同的规格，不同的规格又有不同的价格和优惠力度，规格表为此设计' charset = utf8mb4;
+```
+
+商品详情信息:
+
+![image-20220117222726783](img/foodie-study/image-20220117222726783.png)
+
+对应的商品详情表, items_param:
+
+```mysql
+-- auto-generated definition
+create table items_param
+(
+    id               varchar(64) not null comment '商品参数id'
+    primary key,
+    item_id          varchar(32) not null comment '商品外键id',
+    produc_place     varchar(32) not null comment '产地 产地，例：中国江苏',
+    foot_period      varchar(32) not null comment '保质期 保质期，例：180天',
+    brand            varchar(32) not null comment '品牌名 品牌名，例：三只大灰狼',
+    factory_name     varchar(32) not null comment '生产厂名 生产厂名，例：大灰狼工厂',
+    factory_address  varchar(32) not null comment '生产厂址 生产厂址，例：大灰狼生产基地',
+    packaging_method varchar(32) not null comment '包装方式 包装方式，例：袋装',
+    weight           varchar(32) not null comment '规格重量 规格重量，例：35g',
+    storage_method   varchar(32) not null comment '存储方法 存储方法，例：常温5~25°',
+    eat_method       varchar(32) not null comment '食用方式 食用方式，例：开袋即食',
+    created_time     datetime    not null comment '创建时间',
+    updated_time     datetime    not null comment '更新时间'
+)
+    comment '商品参数 ' charset = utf8mb4;
+```
+
+---
+
+如何进入商品详情页面:
+
+* 所有的查询, 查询商品图片, 商品规格, 商品基本信息, 商品详情都放在一个请求中, 避免因为用户频繁刷新页面导致后端压力过大 -> 这里使用一个请求, 对应四个Service
+* 分开查询相应的信息. 商品图片, 商品规格, 商品基本信息, 商品详情. 四个请求发送到后端, 四个controller接收. 分开请求, 页面加载比单次请求更快
+
+## 商品详情代码实现
+
+1. Service层
+
+相关表的单表查询
+
+接口
+
+```java
+/**
+ * 商品信息相关接口
+ */
+public interface ItemService {
+
+    /**
+     * 根据商品ID查询详情
+     */
+    public Items queryItemById(String itemId);
+    /**
+     * 根据商品id查询商品图片列表
+     */
+    public List<ItemsImg> queryItemImgList(String itemId);
+
+    /**
+     * 根据商品id查询商品规格
+     */
+    public List<ItemsSpec> queryItemSpecList(String itemId);
+
+    /**
+     * 根据商品id查询商品参数
+     */
+    public ItemsParam queryItemParam(String itemId);
+}
+```
+
+impl
+
+```java
+@Service
+public class ItemServiceImpl implements ItemService {
+
+    @Autowired
+    private ItemsMapper itemsMapper;
+
+    @Autowired
+    private ItemsImgMapper itemsImgMapper;
+
+    @Autowired
+    private ItemsSpecMapper itemsSpecMapper;
+
+    @Autowired
+    private ItemsParamMapper itemsParamMapper;
+
+    /**
+     * 根据商品ID查询详情
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public Items queryItemById(String itemId) {
+        return itemsMapper.selectByPrimaryKey(itemId);
+    }
+
+    /**
+     * 根据商品id查询商品图片列表
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public List<ItemsImg> queryItemImgList(String itemId) {
+        Example itemsImgExp = new Example(ItemsImg.class);
+        Example.Criteria criteria = itemsImgExp.createCriteria();
+        criteria.andEqualTo("itemId", itemId);
+
+        return itemsImgMapper.selectByExample(itemsImgExp);
+    }
+
+    /**
+     * 根据商品id查询商品规格
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public List<ItemsSpec> queryItemSpecList(String itemId) {
+        Example itemsSpecExp = new Example(ItemsSpec.class);
+        Example.Criteria criteria = itemsSpecExp.createCriteria();
+        criteria.andEqualTo("itemId", itemId);
+
+        return itemsSpecMapper.selectByExample(itemsSpecExp);
+    }
+
+    /**
+     * 根据商品id查询商品参数
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public ItemsParam queryItemParam(String itemId) {
+        Example itemsParamExp = new Example(ItemsParam.class);
+        Example.Criteria criteria = itemsParamExp.createCriteria();
+        criteria.andEqualTo("itemId", itemId);
+
+        return itemsParamMapper.selectOneByExample(itemsParamExp);
+    }
+}
+```
+
+3. Controller层
+
+新增pojo层中返回前台的数据结构
+
+```java
+package com.imooc.pojo.vo;
+
+import com.imooc.pojo.Items;
+import com.imooc.pojo.ItemsImg;
+import com.imooc.pojo.ItemsParam;
+import com.imooc.pojo.ItemsSpec;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.List;
+
+/**
+ * 返回给前台的商品详情信息
+ */
+@Getter
+@Setter
+public class ItemInfoVO {
+    private Items item;
+    private List<ItemsImg> itemImgList;
+    private List<ItemsSpec> itemSpecList;
+    private ItemsParam itemParams;
+}
+```
+
+api层
+
+```java
+@Api(value = "items api", tags = {"items information presentation api"})
+@RequestMapping("items")
+@RestController
+public class ItemsController {
+
+    @Autowired
+    private ItemService itemService;
+
+    @ApiOperation(value = "queryItemInfo", notes = "query item info", httpMethod = "GET")
+    @GetMapping("/info/{itemId}")
+    public JsonResult info(
+            @ApiParam(name = "itemId", value = "item id", required = true)
+            @PathVariable String itemId) {
+        if (StringUtils.isBlank(itemId)) {
+            return JsonResult.errorMsg("wrong item id");
+        }
+
+        // 返回给前台的数据
+        final ItemInfoVO itemInfoVO = new ItemInfoVO();
+        itemInfoVO.setItem(itemService.queryItemById(itemId));
+        itemInfoVO.setItemImgList(itemService.queryItemImgList(itemId));
+        itemInfoVO.setItemSpecList(itemService.queryItemSpecList(itemId));
+        itemInfoVO.setItemParams(itemService.queryItemParam(itemId));
+
+        return JsonResult.ok(itemInfoVO);
+    }
+}
+```
 
 
 
@@ -3942,7 +4177,14 @@ public JsonResult getSixNewItems(
 
 
 
-# 搜索
+
+
+
+
+
+
+
+
 
 
 
