@@ -8,6 +8,7 @@ import com.imooc.pojo.*;
 import com.imooc.pojo.vo.CommentLevelCountsVO;
 import com.imooc.pojo.vo.ItemCommentVO;
 import com.imooc.service.ItemService;
+import com.imooc.utils.DesensitizationUtil;
 import com.imooc.utils.PagedGridResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -125,9 +126,16 @@ public class ItemServiceImpl implements ItemService {
          * page: 查询哪一页
          * pageSize: 一页的数量
          */
+        // ------------------------ 分页 ------------------------
         PageHelper.startPage(page, pageSize);
 
         List<ItemCommentVO> list = itemsMapperCustom.queryItemComments(map);
+
+        // 信息脱敏
+        for (ItemCommentVO vo : list) {
+            vo.setNickname(DesensitizationUtil.commonDisplay(vo.getNickname()));
+        }
+
 
         // 这里的参数含义和前端不一致, 需要注意
         PageInfo<?> pageInfo = new PageInfo<>(list);
@@ -137,6 +145,19 @@ public class ItemServiceImpl implements ItemService {
         grid.setRecords(pageInfo.getTotal());
         grid.setRows(list);
 
+        return grid;
+
+        // return setterPagedGrid(list, page);
+    }
+
+
+    private PagedGridResult setterPagedGrid(List<?> list, Integer page) {
+        PageInfo<?> pageList = new PageInfo<>(list);
+        PagedGridResult grid = new PagedGridResult();
+        grid.setPage(page);
+        grid.setRows(list);
+        grid.setTotal(pageList.getPages());
+        grid.setRecords(pageList.getTotal());
         return grid;
     }
 
