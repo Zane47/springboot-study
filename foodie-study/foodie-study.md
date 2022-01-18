@@ -4350,19 +4350,394 @@ public JsonResult getItemCommentLevel(
 
 ### 自定义sql
 
+![image-20220118102826900](img/foodie-study/image-20220118102826900.png)
 
 
 
+查询商品评价
 
+```mysql
+select ic.comment_level as commentLevel,
+       ic.content       as contene,
+       ic.sepc_name     as sepcName,
+       ic.created_time  as createTime,
+       u.face           as userFace,
+       u.nickname       as nickname
+from items_comments ic
+         left join users u on ic.user_id = u.id
+where ic.item_id = 'cake-1001'
+  and ic.comment_level = 1
+```
 
+---
+
+在mapper层中.
+
+1. 新建接口
+
+```java
+package com.imooc.mapper;
+
+import com.imooc.pojo.vo.ItemCommentVO;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+import java.util.Map;
+
+public interface ItemsMapperCustom {
+    public List<ItemCommentVO> queryItemComments(@Param("paramsMap") Map<String, Object> map);
+}
+```
+
+2. 新建ItemsMapperCustom.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.imooc.mapper.ItemsMapperCustom">
+    <select id="queryItemComments" parameterType="Map" resultType="com.imooc.pojo.vo.ItemCommentVO">
+        select ic.comment_level as commentLevel,
+        ic.content as content,
+        ic.sepc_name as specName,
+        ic.created_time as createdTime,
+        u.face as userFace,
+        u.nickname as nickname
+        from items_comments ic
+        left join users u on ic.user_id = u.id
+        where ic.item_id = #{paramsMap.itemId}
+        <if test=" paramsMap.level != null and paramsMap.level != '' ">
+            and ic.comment_level = #{paramsMap.level}
+        </if>
+    </select>
+</mapper>
+```
+
+注意这里的`<if>`标签, and条件需要做判断, level可能为空
 
 ### Service
 
+1. pojo中新建返回前台的ItemCommentVO
 
+```java
+package com.imooc.pojo.vo;
 
+import lombok.Getter;
+import lombok.Setter;
 
+import java.util.Date;
+
+/**
+ * 用于展示商品评价的VO
+ */
+@Setter
+@Getter
+public class ItemCommentVO {
+    private Integer commentLevel;
+    private String content;
+    private String specName;
+    private Date createdTime;
+    private String userFace;
+    private String nickname;
+}
+```
+
+2. service层
+
+接口
+
+```java
+/**
+     * 根据商品id查询商品的评价(分页)
+     */
+public List<ItemCommentVO> queryPagedComments(String itemId, Integer level, Integer page, Integer pageSize);
+```
+
+impl
+
+```java
+@Autowired
+private ItemsMapperCustom itemsMapperCustom;
+
+/**
+     * 根据商品id查询商品的评价分页)
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public List<ItemCommentVO> queryPagedComments(String itemId, Integer level, Integer page, Integer pageSize) {
+    Map<String, Object> map = new HashMap<>();
+    map.put("itemId", itemId);
+    map.put("level", level);
+
+    List<ItemCommentVO> itemCommentVOS = itemsMapperCustom.queryItemComments(map);
+
+    return itemCommentVOS;
+}
+```
+
+这里分页还没有处理, 下节用pagehelper进行分页
 
 ### 分页
+
+自定义sql语句中也可以实现分页, 使用limit. 如果系统中有很多分页, 使用pagehelper统一
+
+#### SpringBoot整合mybatis-pagehelper
+
+1. foodie-dev层引入pagehelper依赖
+
+```xml
+<!--pagehelper -->
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper-spring-boot-starter</artifactId>
+    <version>1.2.12</version>
+</dependency>
+```
+
+2. 配置yml文件
+
+foodie-dev的application.yml文件新增配置
+
+```yaml
+# 分页插件配置
+pagehelper:
+  helperDialect: mysql
+  supportMethodsArguments: true
+```
+
+3. 使用分页插件
+
+使用分页插件，在**查询前**使用分页插件，原理: 统一拦截sql, 为其提供分页功能
+
+```java
+/**
+         * page: 第几页
+         * pageSize: 每页显示的数量
+         */
+PageHelper.startPage(page, pageSize);
+```
+
+4. 分页数据封装到PagedGridResult.java传给前端
+
+common层中新增util. 提供给前端的数据
+
+```java
+package com.imooc.utils;
+import lombok.Getter;
+import lombok.Setter;
+import java.util.List;
+@Getter
+@Setter
+public class PagedGridResult {
+    // 当前页数
+    private int page;
+    // 总页数
+    private int total;
+    // 总记录数
+    private long records;
+    // 每行显示的内容
+    private List<?> rows;
+}
+```
+
+pageInfo中包含了分页的数据: 当前第几页, 查询的数据是哪些, 总共多少列
+
+```java
+PageInfo<?> pageInfo = new PageInfo<>(list);
+PagedGridResult pagedGridResult = new PagedGridResult();
+pagedGridResult.setPage(page);
+pagedGridResult.setRecords(pageInfo.getPages());
+pagedGridResult.setRows(list);
+pagedGridResult.setTotal(pageInfo.getTotal());
+```
+
+注意这里的参数含义和自己定义的不一致, 做好对应
+
+接口返回类型修改
+
+```java
+/**
+     * 根据商品id查询商品的评价(分页)
+     */
+public PagedGridResult queryPagedComments(String itemId, Integer level, Integer page, Integer pageSize);
+```
+
+impl
+
+```java
+/**
+     * 根据商品id查询商品的评价分页)
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public PagedGridResult queryPagedComments(String itemId, Integer level, Integer page, Integer pageSize) {
+    Map<String, Object> map = new HashMap<>();
+    map.put("itemId", itemId);
+    map.put("level", level);
+
+    // mybatis-pagehelper
+
+    /**
+         * page: 查询哪一页
+         * pageSize: 一页的数量
+         */
+    PageHelper.startPage(page, pageSize);
+
+    List<ItemCommentVO> list = itemsMapperCustom.queryItemComments(map);
+
+    // 这里的参数含义和前端不一致, 需要注意
+    PageInfo<?> pageInfo = new PageInfo<>(list);
+    PagedGridResult grid = new PagedGridResult();
+    grid.setPage(page);
+    grid.setTotal(pageInfo.getPages());
+    grid.setRecords(pageInfo.getTotal());
+    grid.setRows(list);
+
+    return grid;
+}
+```
+
+其中因为搜索等功能也会用到分页的, 可以拆出来
+
+```java
+private PagedGridResult setterPagedGrid(List<?> list, Integer page) {
+    PageInfo<?> pageList = new PageInfo<>(list);
+    PagedGridResult grid = new PagedGridResult();
+    grid.setPage(page);
+    grid.setRows(list);
+    grid.setTotal(pageList.getPages());
+    grid.setRecords(pageList.getTotal());
+    return grid;
+}
+```
+
+```java
+PageHelper.startPage(page, pageSize);
+
+List<ItemCommentVO> list = itemsMapperCustom.queryItemComments(map);
+
+return setterPagedGrid(list, page);
+```
+
+#### api层
+
+```java
+/**
+     * 查询商品评论信息
+     */
+@ApiOperation(value = "queryItemComments", notes = "queryItemComments", httpMethod = "GET")
+@GetMapping("/comments")
+public JsonResult comments(
+    @ApiParam(name = "itemId", value = "itemId", required = true)
+    @RequestParam String itemId,
+    @ApiParam(name = "level", value = "comment level", required = false)
+    @RequestParam Integer level,
+    @ApiParam(name = "page", value = "查询下一页的第几页", required = false)
+    @RequestParam Integer page,
+    @ApiParam(name = "pageSize", value = "分页的每一页显示的条数", required = false)
+    @RequestParam Integer pageSize) {
+    if (StringUtils.isBlank(itemId)) {
+        return JsonResult.errorMsg("wrong item id");
+    }
+
+    // ------------------------ 设置默认值 ------------------------
+    if (page == null) {
+        page = 1;
+    }
+
+    if (pageSize == null) {
+        pageSize = COMMON_PAGE_SIZE;
+    }
+
+    // ------------------------ handle ------------------------
+    PagedGridResult pagedGridResult = itemService.queryPagedComments(itemId, level, page, pageSize);
+
+    return JsonResult.ok(pagedGridResult);
+}
+```
+
+增加BaseController, 更好的扩展
+
+```java
+package com.imooc.controller;
+
+import org.springframework.stereotype.Controller;
+
+@Controller
+public class BaseController {
+    public static final Integer COMMON_PAGE_SIZE = 10;
+    public static final Integer PAGE_SIZE = 20;
+}
+```
+
+```java
+public class ItemsController extends BaseController {}
+```
+
+前端的分页
+
+```javascript
+renderComments(itemId, level, page, pageSize) {
+
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.get(
+        serverUrl + '/items/comments?itemId=' + itemId + "&level=" + level + "&page=" + page +
+        "&pageSize=" + pageSize, {})
+        .then(res => {
+        if (res.data.status == 200) {
+            var grid = res.data.data;
+            var commentList = grid.rows;
+            this.commentList = commentList;
+            // console.log(commentList);
+
+            for (var i = 0 ; i < commentList.length ; i ++) {
+                var date = commentList[i].createdTime;
+                var formatedTime = moment(date).format('YYYY年MM月DD日 h:mm:ss');
+                // console.log(formatedTime);
+                commentList[i].createdTime = formatedTime;
+            }
+
+            var maxPage = grid.total; // 获得总页数
+            var total = grid.records; // 获得总记录数
+
+            this.maxPage = maxPage;
+            this.total = total;
+
+        } else if (res.data.status == 500) {
+            alert(res.data.msg);
+        }
+    });
+},
+```
+
+`<zpagenav>`
+
+```html
+<!-- 分页 start-->
+<div class="wrap" id="wrap">
+    <zpagenav v-bind:page="page" v-bind:page-size="pageSize" v-bind:total="total" 
+              v-bind:max-page="maxPage"  v-on:pagehandler="doPaging">
+    </zpagenav>
+</div>
+
+// 分页实现方法 跳转到page页
+doPaging: function (page) {
+    this.page = page;
+    this.renderComments(this.itemId, this.level, page, this.pageSize);
+},
+```
+
+分页完成
+
+
+
+
+
+
+
+
+
+
 
 
 

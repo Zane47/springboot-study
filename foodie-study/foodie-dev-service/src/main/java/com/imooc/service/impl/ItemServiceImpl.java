@@ -1,17 +1,23 @@
 package com.imooc.service.impl;
 
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import com.imooc.enums.CommentLevel;
 import com.imooc.mapper.*;
 import com.imooc.pojo.*;
 import com.imooc.pojo.vo.CommentLevelCountsVO;
+import com.imooc.pojo.vo.ItemCommentVO;
 import com.imooc.service.ItemService;
+import com.imooc.utils.PagedGridResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tk.mybatis.mapper.entity.Example;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -31,6 +37,9 @@ public class ItemServiceImpl implements ItemService {
 
     @Autowired
     private ItemsCommentsMapper itemsCommentsMapper;
+
+    @Autowired
+    private ItemsMapperCustom itemsMapperCustom;
 
     /**
      * 根据商品ID查询详情
@@ -101,14 +110,34 @@ public class ItemServiceImpl implements ItemService {
     }
 
     /**
-     * 根据商品id查询商品的评价(分页)
+     * 根据商品id查询商品的评价分页)
      */
     @Transactional(propagation = Propagation.SUPPORTS)
     @Override
-    public Integer queryPagedComments(String itemId, Integer level, Integer page, Integer pageSize) {
+    public PagedGridResult queryPagedComments(String itemId, Integer level, Integer page, Integer pageSize) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("itemId", itemId);
+        map.put("level", level);
 
+        // mybatis-pagehelper
 
-        return null;
+        /**
+         * page: 查询哪一页
+         * pageSize: 一页的数量
+         */
+        PageHelper.startPage(page, pageSize);
+
+        List<ItemCommentVO> list = itemsMapperCustom.queryItemComments(map);
+
+        // 这里的参数含义和前端不一致, 需要注意
+        PageInfo<?> pageInfo = new PageInfo<>(list);
+        PagedGridResult grid = new PagedGridResult();
+        grid.setPage(page);
+        grid.setTotal(pageInfo.getPages());
+        grid.setRecords(pageInfo.getTotal());
+        grid.setRows(list);
+
+        return grid;
     }
 
 
