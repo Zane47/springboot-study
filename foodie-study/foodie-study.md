@@ -4162,35 +4162,221 @@ public class ItemsController {
 }
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # 商品评价
+
+## 需求分析
+
+商品评价是在用户购买商品后, 所有的需求走完了之后进行评价. 这里在商品详情页中可以直接显示商品评价信息.
+
+![image-20220118083347428](img/foodie-study/image-20220118083347428.png)
+
+![image-20220118085516308](img/foodie-study/image-20220118085516308.png)
+
+全部评价, 好评, 中评, 差评. 不同等级的评价都可以点击. 
+
+下面是展示具体的评价内容, 最后包含了分页, 可以分页查询评价内容. 
+
+用户评价时的昵称做脱敏处理, 不展示全称, 屏蔽中间的信息
+
+---
+
+商品评价表: items_comments
+
+```mysql
+-- auto-generated definition
+create table items_comments
+(
+    id            varchar(64)  not null comment 'id主键'
+    primary key,
+    user_id       varchar(64)  null comment '用户id 用户名须脱敏',
+    item_id       varchar(64)  not null comment '商品id',
+    item_name     varchar(64)  null comment '商品名称',
+    item_spec_id  varchar(64)  null comment '商品规格id 可为空',
+    sepc_name     varchar(32)  null comment '规格名称 可为空',
+    comment_level int          not null comment '评价等级 1：好评 2：中评 3：差评',
+    content       varchar(128) not null comment '评价内容',
+    created_time  datetime     null comment '创建时间',
+    updated_time  datetime     null comment '更新时间'
+)
+    comment '商品评价表 ' charset = utf8mb4;
+```
+
+## 评论数量和好评度
+
+查询好评中评差评的评论数量
+
+![image-20220118101207561](img/foodie-study/image-20220118101207561.png)
+
+1. service层
+
+接口
+
+```java
+/**
+     * 根据商品id查询商品的评价等级数量
+     */
+public CommentLevelCountsVO queryCommentCounts(String itemId);
+```
+
+impl
+
+```java
+/**
+     * 根据商品id查询商品的评价等级数量
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public CommentLevelCountsVO queryCommentCounts(String itemId) {
+    Integer goodCounts = getCommentCounts(itemId, CommentLevel.GOOD.type);
+    Integer normalCounts = getCommentCounts(itemId, CommentLevel.NORMAL.type);
+    Integer badCounts = getCommentCounts(itemId, CommentLevel.BAD.type);
+
+    final CommentLevelCountsVO countsVO = new CommentLevelCountsVO();
+    countsVO.setTotalCounts(goodCounts + normalCounts + badCounts);
+    countsVO.setGoodCounts(goodCounts);
+    countsVO.setNormalCounts(normalCounts);
+    countsVO.setBadCounts(badCounts);
+
+    return countsVO;
+}
+
+/**
+     * 根据itemid和评论类型查询评论数量
+     */
+private Integer getCommentCounts(String itemId, Integer type) {
+    ItemsComments itemsComments = new ItemsComments();
+    itemsComments.setItemId(itemId);
+
+    Optional.ofNullable(type).ifPresent(itemsComments::setCommentLevel);
+
+    return itemsCommentsMapper.selectCount(itemsComments);
+}
+```
+
+返回前台的viewObject为CommentLevelCountsVO, pojo中
+
+```java
+package com.imooc.pojo.vo;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * 用于展示商品评价数量的vo
+ */
+@Getter
+@Setter
+public class CommentLevelCountsVO {
+    private Integer totalCounts;
+    private Integer goodCounts;
+    private Integer normalCounts;
+    private Integer badCounts;
+}
+```
+
+查询时候用枚举评论类别
+
+```java
+/**
+ * 商品评价等级 枚举
+ */
+public enum CommentLevel {
+    GOOD(1, "good comment"),
+    NORMAL(2, "normal comment"),
+    BAD(3, "bad comment");
+
+    public final Integer type;
+    public final String value;
+
+    CommentLevel(Integer type, String value) {
+        this.type = type;
+        this.value = value;
+    }
+}
+```
+
+2. controller层
+
+新增调用
+
+```java
+/**
+     * 查询商品评价等级数量信息
+     */
+@ApiOperation(value = "getItemCommentLevel", notes = "getItemCommentLevel", httpMethod = "GET")
+@GetMapping("/commentLevel")
+public JsonResult getItemCommentLevel(
+    @ApiParam(name = "itemId", value = "item id", required = true)
+    @RequestParam String itemId) {
+    if (StringUtils.isBlank(itemId)) {
+        return JsonResult.errorMsg("wrong item id");
+    }
+
+    CommentLevelCountsVO countsVO = itemService.queryCommentCounts(itemId);
+
+    return JsonResult.ok(countsVO);
+}
+```
+
+这样就可以查询到评论的个数
+
+3. 前台的显示
+
+```html
+<div class="actor-new comment-summary">
+    <div class="rate">
+        <div v-if="countsVO.totalCounts == 0">
+            <strong>100<span>%</span></strong>
+        </div>
+        <div v-if="countsVO.totalCounts > 0">
+            <strong>{{Math.round(countsVO.goodCounts / countsVO.totalCounts * 100)}}<span>%</span></strong>
+        </div>
+        <br /><span>好评度</span>
+    </div>
+    <div class="comment-counts">
+
+        <div class="counts-words" @click="renderCommentsByLevel('')">全部评价（{{countsVO.totalCounts}}）</div>
+        <div class="counts-words" @click="renderCommentsByLevel(1)" style="margin-left: 20px;">好评（{{countsVO.goodCounts}}）</div>
+        <div class="counts-words" @click="renderCommentsByLevel(2)" style="margin-left: 20px;">中评（{{countsVO.normalCounts}}）</div>
+        <div class="counts-words" @click="renderCommentsByLevel(3)" style="margin-left: 20px;">差评（{{countsVO.badCounts}}）</div>
+
+    </div>
+</div>
+```
+
+在前台计算好评率
+
+## 评价内容
+
+### 自定义sql
+
+
+
+
+
+
+
+### Service
+
+
+
+
+
+### 分页
+
+
+
+
+
+### 信息脱敏
+
+
+
+
+
+
+
+
 
 
 
