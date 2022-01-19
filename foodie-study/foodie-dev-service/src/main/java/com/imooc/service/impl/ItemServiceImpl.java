@@ -7,6 +7,7 @@ import com.imooc.mapper.*;
 import com.imooc.pojo.*;
 import com.imooc.pojo.vo.CommentLevelCountsVO;
 import com.imooc.pojo.vo.ItemCommentVO;
+import com.imooc.pojo.vo.SearchItemsVO;
 import com.imooc.service.ItemService;
 import com.imooc.utils.DesensitizationUtil;
 import com.imooc.utils.PagedGridResult;
@@ -148,6 +149,29 @@ public class ItemServiceImpl implements ItemService {
         return grid;
 
         // return setterPagedGrid(list, page);
+    }
+
+
+    /**
+     * 搜索商品列表
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public PagedGridResult searchItemsByKeywords(String keywords, String sort, Integer page, Integer pageSize) {
+        Map<String, Object> paramsMap = new HashMap<>();
+        paramsMap.put("keywords", keywords);
+        paramsMap.put("sort", sort);
+
+        /**
+         * page: 查询哪一页
+         * pageSize: 一页的数量
+         */
+        // ------------------------ 分页 ------------------------
+        PageHelper.startPage(page, pageSize);
+
+        List<SearchItemsVO> searchItemsVOList = itemsMapperCustom.searchItems(paramsMap);
+
+        return setterPagedGrid(searchItemsVOList, page);
     }
 
 

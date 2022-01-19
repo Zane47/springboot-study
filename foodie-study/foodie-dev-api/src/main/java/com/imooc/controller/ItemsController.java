@@ -95,4 +95,43 @@ public class ItemsController extends BaseController {
     }
 
 
+    /**
+     * 搜索商品列表
+     */
+    @ApiOperation(value = "searchitems", notes = "searchitems", httpMethod = "GET")
+    @GetMapping("/search")
+    public JsonResult searchByKeywords(
+            @ApiParam(name = "keywords", value = "keywords", required = true)
+            @RequestParam String keywords,
+            @ApiParam(name = "sort", value = "sort", required = false)
+            @RequestParam String sort,
+            @ApiParam(name = "page", value = "page", required = false)
+            @RequestParam Integer page,
+            @ApiParam(name = "pageSize", value = "pageSize", required = false)
+            @RequestParam Integer pageSize) {
+
+        if (StringUtils.isBlank(keywords)) {
+            return JsonResult.errorMsg("keywords is null");
+        }
+
+        // ------------------------ 设置默认值 ------------------------
+        if (page == null) {
+            page = 1;
+        }
+
+        if (pageSize == null) {
+            pageSize = COMMON_PAGE_SIZE;
+        }
+
+
+        // ------------------------ handle ------------------------
+        PagedGridResult pagedGridResult = itemService.searchItemsByKeywords(keywords, sort, page, pageSize);
+
+        return JsonResult.ok(pagedGridResult);
+    }
+
+
+
+
+
 }

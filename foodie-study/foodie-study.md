@@ -4750,6 +4750,56 @@ for (ItemCommentVO vo : list) {
 
 ## 功能详述与sql编写
 
+![image-20220119224035926](img/foodie-study/image-20220119224035926.png)
+
+许多页面都有的搜索框, 搜索好吃之后:
+
+![image-20220119224205634](img/foodie-study/image-20220119224205634.png)
+
+可以看到有分页的效果, 还有展示商品的相关信息(图片, 价格, 销量) -> 这里涉及到多表查询
+
+items为主表, 商品名称, 关联商品规格表(展示规格中最低的那个), 商品图片表(其中选择主图)
+
+页面中还有排序的功能: 默认排序, 价格的排序, 销量的排序. 通过点击切换排序的规则
+
+![image-20220119224505545](img/foodie-study/image-20220119224505545.png)
+
+---
+
+sql编写:
+
+搜索商品列表
+
+```mysql
+-- 搜索商品列表
+select i.id                    as itemId,
+       i.item_name             as itemName,
+       i.sell_counts           as sellCounts,
+       ii.url                  as imgUrl,
+       temp_spec.priceDiscount as price
+from items i
+         left join items_img ii on i.id = ii.item_id
+         left join (select item_id,
+                           MIN(price_discount) as priceDiscount
+                    from items_spec
+                    group by item_id) temp_spec on i.id = temp_spec.item_id
+where ii.is_main = 1;
+
+
+
+-- 预先把商品的最低价格查询出来 -> 临时表提供到上面
+select item_id,
+       MIN(price_discount) as priceDiscount
+from items_spec
+group by item_id;
+```
+
+
+
+
+
+
+
 
 
 
