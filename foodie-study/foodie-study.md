@@ -23,7 +23,7 @@ Struts: MVC框架, 老项目中使用.
 
 ### 前端选型
 
-MVVM开发模式: Model–view–viewmode. [MVC，MVP 和 MVVM 的图示](https://www.ruanyifeng.com/blog/2015/02/mvcmvp_mvvm.html)
+MVVM开发模式: Model–view–viewmode. [MVC, MVP 和 MVVM 的图示](https://www.ruanyifeng.com/blog/2015/02/mvcmvp_mvvm.html)
 
 JQuery, Vue.js(渐进式开发模式)
 
@@ -174,9 +174,9 @@ api不应该直接调用mapper, 应该通过service去操作数据
 
 ---
 
-* package命令完成了项目编译、单元测试、打包功能，但没有把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库和远程maven私服仓库
-* install命令完成了项目编译、单元测试、打包功能，同时把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库，但没有布署到远程maven私服仓库
-* deploy命令完成了项目编译、单元测试、打包功能，同时把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库和远程maven私服仓库
+* package命令完成了项目编译、单元测试、打包功能, 但没有把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库和远程maven私服仓库
+* install命令完成了项目编译、单元测试、打包功能, 同时把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库, 但没有布署到远程maven私服仓库
+* deploy命令完成了项目编译、单元测试、打包功能, 同时把打好的可执行jar包（war包或其它形式的包）布署到本地maven仓库和远程maven私服仓库
 
 ## 修改启动项目前务必install
 
@@ -721,13 +721,13 @@ foodie-dev.pom中添加
 # 通用Mapper配置
 mapper:
   mappers: com.imooc.my.mapper.MyMapper
-  not-empty: false # 在进行数据库操作的的时候，判断表达式 username != null, 是否追加 username != ''
+  not-empty: false # 在进行数据库操作的的时候, 判断表达式 username != null, 是否追加 username != ''
   identity: MYSQL
 ```
 
 not-empty: 做更新等操作判断属性是否为空,  
 
-在进行数据库操作的的时候，判断表达式 username != null, 是否追加 username != ''
+在进行数据库操作的的时候, 判断表达式 username != null, 是否追加 username != ''
 
 建议自己手写, 不要依赖框架 
 
@@ -1351,11 +1351,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @Package com.imooc.utils
  * @Description: 自定义响应数据结构
  * 				本类可提供给 H5/ios/安卓/公众号/小程序 使用
- * 				前端接受此类数据（json object)后，可自行根据业务去实现相关功能
+ * 				前端接受此类数据（json object)后, 可自行根据业务去实现相关功能
  *
  * 				200：表示成功
- * 				500：表示错误，错误信息在msg字段中
- * 				501：bean验证错误，不管多少个错误都以map形式返回
+ * 				500：表示错误, 错误信息在msg字段中
+ * 				501：bean验证错误, 不管多少个错误都以map形式返回
  * 				502：拦截器拦截到用户token出错
  * 				555：异常抛出信息
  * 				556: 用户qq校验异常
@@ -1871,7 +1871,7 @@ public class PassportController {}
 
 <img src="img/foodie-study/image-20220114142024743.png" alt="image-20220114142024743" style="zoom:67%;" />
 
-3. @ApiOperation用在请求的方法上，说明方法的用途、作用
+3. @ApiOperation用在请求的方法上, 说明方法的用途、作用
 
 ![image-20220114142718471](img/foodie-study/image-20220114142718471.png)
 
@@ -1923,16 +1923,16 @@ public class UserBO {
 总结: 
 
 ```
-@Api：用在请求的类上，表示对类的说明
-    tags="说明该类的作用，可以在UI界面上看到的注解"
-    value="该参数没什么意义，在UI界面上也看到，所以不需要配置"
+@Api：用在请求的类上, 表示对类的说明
+    tags="说明该类的作用, 可以在UI界面上看到的注解"
+    value="该参数没什么意义, 在UI界面上也看到, 所以不需要配置"
 
-@ApiOperation：用在请求的方法上，说明方法的用途、作用
+@ApiOperation：用在请求的方法上, 说明方法的用途、作用
     value="说明方法的用途、作用"
     notes="方法的备注说明"
 
-@ApiImplicitParams：用在请求的方法上，表示一组参数说明
-    @ApiImplicitParam：用在@ApiImplicitParams注解中，指定一个请求参数的各个方面
+@ApiImplicitParams：用在请求的方法上, 表示一组参数说明
+    @ApiImplicitParam：用在@ApiImplicitParams注解中, 指定一个请求参数的各个方面
         name：参数名
         value：参数的汉字说明、解释
         required：参数是否必须传
@@ -1942,19 +1942,19 @@ public class UserBO {
             · path（用于restful接口）--> 请求参数的获取：@PathVariable
             · body（不常用）
             · form（不常用）    
-        dataType：参数类型，默认String，其它值dataType="Integer"       
+        dataType：参数类型, 默认String, 其它值dataType="Integer"       
         defaultValue：参数的默认值
 
-@ApiResponses：用在请求的方法上，表示一组响应
-    @ApiResponse：用在@ApiResponses中，一般用于表达一个错误的响应信息
-        code：数字，例如400
-        message：信息，例如"请求参数没填好"
+@ApiResponses：用在请求的方法上, 表示一组响应
+    @ApiResponse：用在@ApiResponses中, 一般用于表达一个错误的响应信息
+        code：数字, 例如400
+        message：信息, 例如"请求参数没填好"
         response：抛出异常的类
 
-@ApiModel：用于响应类上，表示一个返回响应数据的信息
-            （这种一般用在post创建的时候，使用@RequestBody这样的场景，
+@ApiModel：用于响应类上, 表示一个返回响应数据的信息
+            （这种一般用在post创建的时候, 使用@RequestBody这样的场景, 
             请求参数无法使用@ApiImplicitParam注解进行描述的时候）
-    @ApiModelProperty：用在属性上，描述响应类的属性
+    @ApiModelProperty：用在属性上, 描述响应类的属性
     
 @ApiIgnore: 当前类不需要显示
 
@@ -2192,7 +2192,7 @@ cookie: 存储在浏览器的缓. 例子, `www.jd.com`中 F12中的application
 
 - 以键值对的形式存储信息在浏览器. 存储在浏览器的缓存, 大小有限制(不超过4kb)
 
-- cookie不能跨域，当前及其父级域名可以取值. 例如: `www.jd.com`中jd.com就是一级域名
+- cookie不能跨域, 当前及其父级域名可以取值. 例如: `www.jd.com`中jd.com就是一级域名
 
 * cookie可以设置有效时期expires
 
@@ -2443,8 +2443,8 @@ public class ServiceLogAspect {
      * AOP通知：
      * 1. 前置通知：在方法调用之前执行
      * 2. 后置通知：在方法正常调用之后执行
-     * 3. 环绕通知：在方法调用之前和之后，都分别可以执行的通知
-     * 4. 异常通知：如果在方法调用过程中发生异常，则通知
+     * 3. 环绕通知：在方法调用之前和之后, 都分别可以执行的通知
+     * 4. 异常通知：如果在方法调用过程中发生异常, 则通知
      * 5. 最终通知：在方法调用之后执行
      */
 
@@ -2454,8 +2454,8 @@ public class ServiceLogAspect {
      * 第一处 * 代表方法返回类型 *代表所有类型
      * 第二处 包名代表aop监控的类所在的包
      * 第三处 .. 代表该包以及其子包下的所有类方法
-     * 第四处 * 代表类名，*代表所有类
-     * 第五处 *(..) *代表类中的方法名，(..)表示方法中的任何参数
+     * 第四处 * 代表类名, *代表所有类
+     * 第五处 *(..) *代表类中的方法名, (..)表示方法中的任何参数
      *
      * @param joinPoint
      * @return
@@ -2540,7 +2540,7 @@ public JsonResult logout(@RequestParam String userId,
     CookieUtils.deleteCookie(request, response, "user");
 
 
-    // TODO 用户退出登录，需要清空购物车
+    // TODO 用户退出登录, 需要清空购物车
     // TODO 分布式会话中需要清除用户数据
 
     return JsonResult.ok();
@@ -2613,7 +2613,7 @@ Transaction synchronization closing SqlSession [org.apache.ibatis.session.defaul
 
 * 可以点击跳转商品, 或者跳转商品类别
 
-* type: 轮播图类型，用于判断，可以根据商品id或者分类进行页面跳转，r1：商品2：分类
+* type: 轮播图类型, 用于判断, 可以根据商品id或者分类进行页面跳转, r1：商品2：分类
 
 1. Service层
 
@@ -2772,8 +2772,8 @@ father: 上级分类id
 
 ```java
 首页分类展示需求：
-1. 第一次刷新主页查询大分类，渲染展示到首页
-2. 如果鼠标上移到大分类(根分类)，则加载其子分类的内容，如果已经存在子分类，则不需要加载（懒加载模式）
+1. 第一次刷新主页查询大分类, 渲染展示到首页
+2. 如果鼠标上移到大分类(根分类), 则加载其子分类的内容, 如果已经存在子分类, 则不需要加载（懒加载模式）
 ```
 
 ## 分类实现
@@ -2782,7 +2782,7 @@ father: 上级分类id
 
 查看前端代码的渲染分类方法renderCategorys(). 
 
-懒加载逻辑: 如果该节点下没有内容，则发起请求查询子分类并且渲染到页面，如果有的话就不查询了（懒加载模式）
+懒加载逻辑: 如果该节点下没有内容, 则发起请求查询子分类并且渲染到页面, 如果有的话就不查询了（懒加载模式）
 
 ```javascript
 renderCategorys() {
@@ -2819,7 +2819,7 @@ renderCategorys() {
                 var subCatHtml = subWapper.html();
                 var rootCatId = subWapper.attr("rootCatId");
                 // console.log(rootCatId);
-                // 如果该节点下没有内容，则发起请求查询子分类并且渲染到页面，如果有的话就不查询了（懒加载模式）
+                // 如果该节点下没有内容, 则发起请求查询子分类并且渲染到页面, 如果有的话就不查询了（懒加载模式）
                 if (subCatHtml == null || subCatHtml == '' || subCatHtml == undefined) {
                     if (rootCatId != undefined && rootCatId != null && rootCatId != '') {
                         // 根据root分类id查询该分类下的所有子分类
@@ -3012,7 +3012,7 @@ public JsonResult getAllRootCategories() {
             "type": 1,
             "fatherId": 0,
             "logo": "img/cookies.png",
-            "slogan": "嘎嘣脆，一听到声音就开吃",
+            "slogan": "嘎嘣脆, 一听到声音就开吃",
             "catImage": "http://122.152.205.72:88/foodie/category/cookies.png",
             "bgColor": "#f59cec"
         },
@@ -3032,7 +3032,7 @@ public JsonResult getAllRootCategories() {
             "type": 1,
             "fatherId": 0,
             "logo": "img/luwei.png",
-            "slogan": "香辣甜辣麻辣，辣了才有味",
+            "slogan": "香辣甜辣麻辣, 辣了才有味",
             "catImage": "http://122.152.205.72:88/foodie/category/duck.png",
             "bgColor": "#82ceff"
         },
@@ -3042,7 +3042,7 @@ public JsonResult getAllRootCategories() {
             "type": 1,
             "fatherId": 0,
             "logo": "img/jianguo.png",
-            "slogan": "酥脆无比，休闲最佳",
+            "slogan": "酥脆无比, 休闲最佳",
             "catImage": "http://122.152.205.72:88/foodie/category/nut.png",
             "bgColor": "#c6a868"
         },
@@ -3062,7 +3062,7 @@ public JsonResult getAllRootCategories() {
             "type": 1,
             "fatherId": 0,
             "logo": "img/chocolate.png",
-            "slogan": "美容养颜，男女都爱",
+            "slogan": "美容养颜, 男女都爱",
             "catImage": "http://122.152.205.72:88/foodie/category/chocolate.png",
             "bgColor": "#f8c375"
         },
@@ -3092,7 +3092,7 @@ public JsonResult getAllRootCategories() {
             "type": 1,
             "fatherId": 0,
             "logo": "img/food.png",
-            "slogan": "新鲜少不了，每日蔬果生鲜",
+            "slogan": "新鲜少不了, 每日蔬果生鲜",
             "catImage": "http://122.152.205.72:88/foodie/category/meat2.png",
             "bgColor": "#6cc67c"
         }
@@ -3124,7 +3124,7 @@ select * from category f left join category c on f.id = c.father_id where f.fath
 
 前半部分二级分类和后半部分三级分类
 
-LEFT JOIN 关键字从左表（table1）返回所有的行，即使右表（table2）中没有匹配。如果右表中没有匹配，则结果为 NULL。
+LEFT JOIN 关键字从左表（table1）返回所有的行, 即使右表（table2）中没有匹配。如果右表中没有匹配, 则结果为 NULL。
 
 显示前端需要的内容
 
@@ -3254,7 +3254,7 @@ public class SubCategoryVO {
         <!--
           collection 标签：用于定义关联的list集合类型的封装规则
           property：对应三级分类的list属性名
-          ofType：集合的类型，三级分类的vo
+          ofType：集合的类型, 三级分类的vo
         -->
         <collection property="subCategoryList" ofType="com.imooc.pojo.vo.SubCategoryVO">
             <id column="subId" property="subId"/>
@@ -3473,7 +3473,7 @@ axios.get(serverUrl + '/index/subCat/' + rootCatId, {})
         var scrollHeight = $(document).height();
         var windowHeight = $(this).height();
         if (scrollTop + windowHeight > (scrollHeight - 50) ) {
-            // 此处是滚动条到底部时候触发的事件，在这里写要加载的数据，或者是拉动滚动条的操作
+            // 此处是滚动条到底部时候触发的事件, 在这里写要加载的数据, 或者是拉动滚动条的操作
             // console.log("123");
             index.renderSixNewItems();
         }
@@ -3604,7 +3604,7 @@ create table items
     created_time  datetime    not null comment '创建时间',
     updated_time  datetime    not null comment '更新时间'
 )
-    comment '商品表 商品信息相关表：分类表，商品图片表，商品规格表，商品参数表' charset = utf8mb4;
+    comment '商品表 商品信息相关表：分类表, 商品图片表, 商品规格表, 商品参数表' charset = utf8mb4;
 ```
 
 cat_id, 分类外键id, 子分类的id, 三级分类id
@@ -3960,7 +3960,7 @@ create table items_spec
     created_time   datetime      not null comment '创建时间',
     updated_time   datetime      not null comment '更新时间'
 )
-    comment '商品规格 每一件商品都有不同的规格，不同的规格又有不同的价格和优惠力度，规格表为此设计' charset = utf8mb4;
+    comment '商品规格 每一件商品都有不同的规格, 不同的规格又有不同的价格和优惠力度, 规格表为此设计' charset = utf8mb4;
 ```
 
 商品详情信息:
@@ -3976,15 +3976,15 @@ create table items_param
     id               varchar(64) not null comment '商品参数id'
     primary key,
     item_id          varchar(32) not null comment '商品外键id',
-    produc_place     varchar(32) not null comment '产地 产地，例：中国江苏',
-    foot_period      varchar(32) not null comment '保质期 保质期，例：180天',
-    brand            varchar(32) not null comment '品牌名 品牌名，例：三只大灰狼',
-    factory_name     varchar(32) not null comment '生产厂名 生产厂名，例：大灰狼工厂',
-    factory_address  varchar(32) not null comment '生产厂址 生产厂址，例：大灰狼生产基地',
-    packaging_method varchar(32) not null comment '包装方式 包装方式，例：袋装',
-    weight           varchar(32) not null comment '规格重量 规格重量，例：35g',
-    storage_method   varchar(32) not null comment '存储方法 存储方法，例：常温5~25°',
-    eat_method       varchar(32) not null comment '食用方式 食用方式，例：开袋即食',
+    produc_place     varchar(32) not null comment '产地 产地, 例：中国江苏',
+    foot_period      varchar(32) not null comment '保质期 保质期, 例：180天',
+    brand            varchar(32) not null comment '品牌名 品牌名, 例：三只大灰狼',
+    factory_name     varchar(32) not null comment '生产厂名 生产厂名, 例：大灰狼工厂',
+    factory_address  varchar(32) not null comment '生产厂址 生产厂址, 例：大灰狼生产基地',
+    packaging_method varchar(32) not null comment '包装方式 包装方式, 例：袋装',
+    weight           varchar(32) not null comment '规格重量 规格重量, 例：35g',
+    storage_method   varchar(32) not null comment '存储方法 存储方法, 例：常温5~25°',
+    eat_method       varchar(32) not null comment '食用方式 食用方式, 例：开袋即食',
     created_time     datetime    not null comment '创建时间',
     updated_time     datetime    not null comment '更新时间'
 )
@@ -4506,7 +4506,7 @@ pagehelper:
 
 3. 使用分页插件
 
-使用分页插件，在**查询前**使用分页插件，原理: 统一拦截sql, 为其提供分页功能
+使用分页插件, 在**查询前**使用分页插件, 原理: 统一拦截sql, 为其提供分页功能
 
 ```java
 /**
@@ -4849,7 +4849,7 @@ searchInBackend(keywords, sort, page, pageSize) {
     </if>
     order by
     <choose>
-        <!-- k: 默认，代表默认排序，根据name-->
+        <!-- k: 默认, 代表默认排序, 根据name-->
         <!-- c: 根据销量排序-->
         <!-- p: 根据价格排序-->
         <when test="paramsMap.sort == &quot;c&quot;">
@@ -5140,7 +5140,7 @@ searchCatItemsInBackend(catId, sort, page, pageSize) {
     and i.cat_id = #{paramsMap.thirdCategoryId}
     order by
     <choose>
-        <!-- k: 默认，代表默认排序，根据name-->
+        <!-- k: 默认, 代表默认排序, 根据name-->
         <!-- c: 根据销量排序-->
         <!-- p: 根据价格排序-->
         <when test="paramsMap.sort == &quot;c&quot;">
@@ -5249,11 +5249,238 @@ public JsonResult catItems(
 
 ![image-20220120183658368](img/foodie-study/image-20220120183658368.png)
 
-
 # 购物车
+
+核心功能之一. 购物车, 订单, 支付
 
 ## 购物车的存储形式
 
+看中的商品放入购物车, 最后一起结算. 那么购物车就需要存储下来. 
+
+购物车存储的形式: 
+
+1. cookie存储形式: 购物车数据保存到Cookie中, 在客户端上的缓存, *cookie大小不超过4KB*: 
+
+* 无须登录、无须查库、保存在浏览器端
+* 优点: 性能好、访问快, 没有和数据库交互
+
+* 缺点: 换电脑购物车数据会丢失(未登录的情况下). 隐私安全问题
+
+2. session存储形式: 用户会话, 在登陆后产生
+
+- 用户登录后, 购物车数据放入用户会话
+
+* 优点: 基于服务器内存. 初期性能较好, 访问快
+
+* 缺点: session基于内存, 用户量庞大影响服务器性能.
+* 缺点: 用户和session相关联, 只能存在与当前会话, 用户换了电脑或者服务器集群或者分布式扩展, session只会在同一个服务器上, 不会同步到其他的集群中. 不适用集群与分布式系统. 
+
+-> 虽然现在项目时单体, 但是后续会发展到分布式, 所以不会使用有状态的会话session
+
+3. 数据库存储形式: 用户登录后, 加入购物车的数据存储db
+
+* 用户登录后, 购物车数据存入数据库.
+
+* 优点: 数据持久化, 可在任何地点任何时间访问
+
+* 缺点: 频繁添加删除商品, 也就是频繁读写数据库, 造成数据库压力 -> 不适合
+
+4. Redis存储形式: 会话把内容存储到内存, 这里使用Redis把数据持久化到磁盘中 -> 重启后不会丢失, 并且存储在磁盘中的查询速度比数据库中快 -> Redis作为购物车内容的载体. ps: 分布式会话也可以依靠Redis来实现. 后续可以把购物车整合到Redis中, 分布式购物车
+
+* 用户登录后, 购物车数据存入redis缓存.
+
+* 优点: 数据持久化, 可在任何地点任何时间访问 -> 注意这里要区别于数据库. 数据库也可以持久化, 但是性能更低. -> 数据库一般会成为网站的瓶颈, 能使用缓存就使用缓存
+* 优点: 频繁读写只基于缓存, 不会造成数据库压力
+* 优点: 适用于集群与分布式系统, 可扩展性强. 如果使用http的session, 每一个服务器都是独立的会话, 那么集群和分布式中每一个服务器的都不一样. Redis可以实现统一. 可扩展性强
+
+---
+
+此处会用Cookie+Redis的方式:
+
+* 用户未登录的情况下使用cookie
+* 用户已登陆的情况下使用cookie + Redis. -> todo: Redis的部分预留, 等分布式学习结束后加上 -> **第六周: 2-02 SpringBoot整合Redis实战**. 之后整合Redis到会话和购物车业务中
+
+## 未登录, 已登录加入购物车
+
+### 京东演示
+
+**未登录情况下**, 在jd中随便添加物品到购物车中.
+
+<img src="img/foodie-study/image-20220120212830756.png" alt="image-20220120212830756" style="zoom:80%;" />
+
+然后F12中查看cookie, 删除后可以看到之前加入购物车的商品也清除. -> 现在已经要求登录
+
+### 前端代码
+
+查看前端商品详情页面, items.html中的加入购物车逻辑
+
+<img src="img/foodie-study/image-20220120214518173.png" alt="image-20220120214518173" style="zoom:67%;" />
+
+```html
+<div class="pay">
+    <!-- <li>
+<div class="clearfix tb-btn tb-btn-buy theme-login">
+<a id="LikBuy" title="点此按钮到下一步确认购买信息" href="#">立即购买</a>
+</div>
+</li> -->
+    <li>
+        <div class="clearfix tb-btn tb-btn-basket theme-login">
+            <a id="LikBasket"
+               style="width:160px; height: 46px;background-color: #df2e33; font-weight: bold; line-height: 46px;font-size: 18px;padding: 0 26px;font-family: 'microsoft yahei';"
+               title="加入购物车" href="javascript:void(0);" @click="addToCart"><i></i>加入购物车</a>
+        </div>
+    </li>
+</div>
+```
+
+查看其中的addToCart方法
+
+```javascript
+addToCart() {
+    // 由于cookie大小限制为4k，另外课程第一阶段是没有redis的，所以相关暂存性内容会存入到cookie中
+    var shopcartCounts = app.getShopcartItemCounts();
+    if (shopcartCounts >= 8) {
+        alert("您购物车中的食物太多啦~请把它们带回家吧~！");
+        return;
+    }
+
+    // 创建购物车对象
+    var item = this.item;
+    var itemImgList = this.itemImgList;
+    // 选中的规格
+    var selectedSku = this.selectedSku;
+
+    var tmpBuyCounts = this.buyCounts;
+    tmpBuyCounts = parseInt(tmpBuyCounts);
+    if (typeof (tmpBuyCounts) != "number") {
+        alert("购买数量不能为非数字！");
+        // tmpBuyCounts = 1;
+        this.buyCounts = 1;
+        return;
+    }
+
+    // 构建购物车商品对象
+    var shopcartItem = new app.ShopcartItem(item.id,
+                                            itemImgList[0].url,
+                                            item.itemName,
+                                            selectedSku.id,
+                                            selectedSku.name,
+                                            tmpBuyCounts,
+                                            selectedSku.priceDiscount,
+                                            selectedSku.priceNormal);
+    // console.log(shopcartItem);
+    // 添加商品至购物车list
+    app.addItemToShopcart(shopcartItem);
+
+    // 购物车应该在登录/注册的时候同步
+
+    // 判断当前用户是否登录，如果登录，则把购物车数据发送至后端（后端需要合并已存在的商品）
+    var userIsLogin = this.userIsLogin;
+    if (userIsLogin) {
+        var userInfo = this.userInfo;
+        var serverUrl = app.serverUrl;
+        axios.defaults.withCredentials = true;
+        axios.post(
+            serverUrl + '/shopcart/add?userId=' + userInfo.id,
+            shopcartItem, {
+                headers: {
+                    'headerUserId': userInfo.id,
+                    'headerUserToken': userInfo.userUniqueToken
+                }
+            })
+            .then(res => {
+            if (res.data.status == 200) {
+
+            } else if (res.data.status == 500) {
+                alert(res.data.msg);
+            }
+        });
+    }
+
+    alert("商品添加至购物车成功！");
+
+    // 以下仅供测试观察数据
+    // var foodieShopcartCookie = app.getCookie("shopcart");
+    // var foodieShopcart = [];
+    // if (foodieShopcartCookie != null && foodieShopcartCookie != "" && foodieShopcartCookie != undefined) {
+    // 	var foodieShopcartStr = decodeURIComponent(foodieShopcartCookie);
+    // 	foodieShopcart = JSON.parse(foodieShopcartStr);
+    // }
+    // console.log(foodieShopcart);
+
+    // 刷新购物车数量
+    this.shopcartItemCounts = app.getShopcartItemCounts();
+},
+```
+
+其中的this.buycounts
+
+```html
+<input id="text_box" name="" type="text" v-model="buyCounts" style="width:30px;" />
+```
+
+app.ShopcartItem和addItemToShopcart, 查看内容.
+
+购物车的数据结构本身就是一个jsonList
+
+```javascript
+/**
+	 * 构建购物车商品对象
+	 */
+ShopcartItem: function(itemId, itemImgUrl, itemName, specId, specName, buyCounts, priceDiscount, priceNormal) {
+    this.itemId = itemId;
+    this.itemImgUrl = itemImgUrl;
+    this.itemName = itemName;
+    this.specId = specId;
+    this.specName = specName;
+    this.buyCounts = buyCounts;
+    this.priceDiscount = priceDiscount;
+    this.priceNormal = priceNormal;
+},
+```
+
+```javascript
+addItemToShopcart(pendingItem) {
+    // 判断有没有购物车，如果没有购物车，则new 一个购物车list
+    // 如果有购物车，则直接把shopcartItem丢进去
+    var foodieShopcartCookie = this.getCookie("shopcart");
+    var foodieShopcart = [];
+    if (foodieShopcartCookie != null && foodieShopcartCookie != "" && foodieShopcartCookie != undefined) {
+        var foodieShopcartStr = decodeURIComponent(foodieShopcartCookie);
+        foodieShopcart = JSON.parse(foodieShopcartStr);
+
+        // 如果不是对象，则重新复制为空数组
+        if (typeof(foodieShopcart) != "object") {
+            foodieShopcart = [];
+        }
+
+        var isHavingItem = false;
+        // 如果添加的商品已经存在与购物车中，则购物车中已经存在的商品数量累加新增的
+        for(var i = 0 ; i < foodieShopcart.length ; i ++) {
+            var tmpItem = foodieShopcart[i];
+            var specId = tmpItem.specId;
+            if (specId == pendingItem.specId) {
+                isHavingItem = true;
+                var newCounts = tmpItem.buyCounts + pendingItem.buyCounts;
+                tmpItem.buyCounts = newCounts;
+                // 删除主图在数组中的位置
+                foodieShopcart.splice(i, 1, tmpItem);
+            }
+        }   
+        if (!isHavingItem) {
+            foodieShopcart.push(pendingItem);
+        }
+    } else {
+        foodieShopcart.push(pendingItem);
+    }
+
+    this.setCookie("shopcart", JSON.stringify(foodieShopcart));
+},
+```
+
+shopcartItem构建展示的内容
+
+![image-20220120225310176](img/foodie-study/image-20220120225310176.png)
 
 
 
@@ -5262,13 +5489,6 @@ public JsonResult catItems(
 
 
 
-
-
-
-
-
-
-## 未登录, 已登录加入购物车业务代码
 
 
 
@@ -5766,11 +5986,11 @@ public JsonResult catItems(
 
 [Java架构师-技术专家](https://class.imooc.com/javaarchitect#Anchor), 地基项目
 
-* 第1周  万丈高楼，地基首要
+* 第1周  万丈高楼, 地基首要
 
-* 第2周  分类，推荐，搜索，评价，购物车开发
+* 第2周  分类, 推荐, 搜索, 评价, 购物车开发
 
-* 第3周  地址，订单，支付，定时任务开发
+* 第3周  地址, 订单, 支付, 定时任务开发
 
 * 第4周  用户中心 ,订单/评价管理开发
 
