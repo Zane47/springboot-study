@@ -11,6 +11,7 @@ public class SearchItemsVO {
     private String itemName;
     private Integer sellCounts;
     private String imgUrl;
+    // 数据库中价格以分为单位, 前端会除以100, 所以这里用int
     private Integer price;
 
 }

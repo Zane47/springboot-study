@@ -4794,29 +4794,149 @@ from items_spec
 group by item_id;
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## 实现商品搜索功能
 
+1. itemsCustomMapper.xml中配置
+
+```xml
+<!-- 商品搜索结果 -->
+<select id="searchItems" parameterType="Map" resultType="com.imooc.pojo.vo.SearchItemsVO">
+    select i.id as itemId,
+    i.item_name as itemName,
+    i.sell_counts as sellCounts,
+    ii.url as imgUrl,
+    temp_spec.price_discount as price
+    from items i
+    left join items_img ii on i.id = ii.item_id
+    left join (select item_id,
+    MIN(price_discount) as price_discount
+    from items_spec
+    group by item_id) temp_spec on i.id = temp_spec.item_id
+    where ii.is_main = 1
+    <if test=" paramsMap.keywords != null and paramsMap.keywords != '' ">
+        and i.item_name like '%${paramsMap.keywords}%'
+    </if>
+    order by
+    <choose>
+        <!-- k: 默认，代表默认排序，根据name-->
+        <!-- c: 根据销量排序-->
+        <!-- p: 根据价格排序-->
+        <when test="paramsMap.sort == &quot;c&quot;">
+            i.sell_counts desc
+        </when>
+        <when test="paramsMap.sort == &quot;p&quot;">
+            temp_spec.price_discount asc
+        </when>
+        <otherwise>
+            i.item_name asc
+        </otherwise>
+    </choose>
+</select>
+```
+
+注意这里的拼接sql. 
+
+```
+&quot; 是"的转义. 
+
+%${paramsMap.keywords}%: 因为这里是要做模糊搜索, 所以两个%需要和keywords做拼接, 不能使用#, 需要使用$
+```
 
 
 
+其中的SearchItemsVO, 返回给前台的view object
+
+```java
+@Getter
+@Setter
+public class SearchItemsVO {
+    private String itemId;
+    private String itemName;
+    private Integer sellCounts;
+    private String imgUrl;
+    private Integer price;
+}
+```
+
+price使用int: 数据库中价格以分为单位, 前端会除以100, 所以这里用int
+
+2. service层
+
+接口
+
+```java
+/**
+     * 搜索商品列表
+     */
+public PagedGridResult searchItemsByKeywords(String keywords, String sort,Integer page, Integer pageSize);
+```
+
+impl
+
+```java
+/**
+     * 搜索商品列表
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public PagedGridResult searchItemsByKeywords(String keywords, String sort, Integer page, Integer pageSize) {
+    Map<String, Object> paramsMap = new HashMap<>();
+    paramsMap.put("keywords", keywords);
+    paramsMap.put("sort", sort);
+
+    /**
+         * page: 查询哪一页
+         * pageSize: 一页的数量
+         */
+    // ------------------------ 分页 ------------------------
+    PageHelper.startPage(page, pageSize);
+
+    List<SearchItemsVO> searchItemsVOList = itemsMapperCustom.searchItems(paramsMap);
+
+    return setterPagedGrid(searchItemsVOList, page);
+}
+```
+
+3. api层
+
+```java
+/**
+     * 搜索商品列表
+     */
+@ApiOperation(value = "searchitems", notes = "searchitems", httpMethod = "GET")
+@GetMapping("/search")
+public JsonResult searchByKeywords(
+    @ApiParam(name = "keywords", value = "keywords", required = true)
+    @RequestParam String keywords,
+    @ApiParam(name = "sort", value = "sort", required = false)
+    @RequestParam String sort,
+    @ApiParam(name = "page", value = "page", required = false)
+    @RequestParam Integer page,
+    @ApiParam(name = "pageSize", value = "pageSize", required = false)
+    @RequestParam Integer pageSize) {
+
+    if (StringUtils.isBlank(keywords)) {
+        return JsonResult.errorMsg("keywords is null");
+    }
+
+    // ------------------------ 设置默认值 ------------------------
+    if (page == null) {
+        page = 1;
+    }
+
+    if (pageSize == null) {
+        pageSize = COMMON_PAGE_SIZE;
+    }
 
 
+    // ------------------------ handle ------------------------
+    PagedGridResult pagedGridResult = itemService.searchItemsByKeywords(keywords, sort, page, pageSize);
+
+    return JsonResult.ok(pagedGridResult);
+}
+```
+
+前端的搜索结果页: catItems.html
 
 
 
