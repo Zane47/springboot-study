@@ -55,4 +55,10 @@ public interface ItemService {
     public PagedGridResult searchItemsByKeywords(String keywords, String sort,
                                                  Integer page, Integer pageSize);
 
+    /**
+     * 根据三级分类id搜索商品
+     */
+    public PagedGridResult searchItemsByThirdCategoryId(Integer thirdCategoryId, String sort,
+                                                        Integer page, Integer pageSize);
+
 }

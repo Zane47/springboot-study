@@ -174,6 +174,25 @@ public class ItemServiceImpl implements ItemService {
         return setterPagedGrid(searchItemsVOList, page);
     }
 
+    /**
+     * 根据三级分类id搜索商品
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public PagedGridResult searchItemsByThirdCategoryId(Integer thirdCategoryId, String sort,
+                                                        Integer page, Integer pageSize) {
+
+        Map<String, Object> paramsMap = new HashMap<>();
+        paramsMap.put("thirdCategoryId", thirdCategoryId);
+        paramsMap.put("sort", sort);
+
+        PageHelper.startPage(page, pageSize);
+
+        List<SearchItemsVO> list = itemsMapperCustom.searchItemsByThirdCategoryId(paramsMap);
+
+        return setterPagedGrid(list, page);
+    }
+
 
     private PagedGridResult setterPagedGrid(List<?> list, Integer page) {
         PageInfo<?> pageList = new PageInfo<>(list);

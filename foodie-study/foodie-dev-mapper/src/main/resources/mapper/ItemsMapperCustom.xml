@@ -19,7 +19,7 @@
     </select>
 
 
-    <!-- 商品搜索结果 -->
+    <!-- 搜索框商品搜索结果 -->
     <select id="searchItems" parameterType="Map" resultType="com.imooc.pojo.vo.SearchItemsVO">
         select i.id as itemId,
         i.item_name as itemName,
@@ -36,6 +36,39 @@
         <if test=" paramsMap.keywords != null and paramsMap.keywords != '' ">
             and i.item_name like '%${paramsMap.keywords}%'
         </if>
+        order by
+        <choose>
+            <!-- k: 默认，代表默认排序，根据name-->
+            <!-- c: 根据销量排序-->
+            <!-- p: 根据价格排序-->
+            <when test="paramsMap.sort == &quot;c&quot;">
+                i.sell_counts desc
+            </when>
+            <when test="paramsMap.sort == &quot;p&quot;">
+                temp_spec.price_discount asc
+            </when>
+            <otherwise>
+                i.item_name asc
+            </otherwise>
+        </choose>
+    </select>
+
+
+    <!-- 通过分类id搜索商品列表 -->
+    <select id="searchItemsByThirdCategoryId" parameterType="Map" resultType="com.imooc.pojo.vo.SearchItemsVO">
+        select i.id as itemId,
+        i.item_name as itemName,
+        i.sell_counts as sellCounts,
+        ii.url as imgUrl,
+        temp_spec.price_discount as price
+        from items i
+        left join items_img ii on i.id = ii.item_id
+        left join (select item_id,
+        MIN(price_discount) as price_discount
+        from items_spec
+        group by item_id) temp_spec on i.id = temp_spec.item_id
+        where ii.is_main = 1
+        and i.cat_id = #{paramsMap.thirdCategoryId}
         order by
         <choose>
             <!-- k: 默认，代表默认排序，根据name-->

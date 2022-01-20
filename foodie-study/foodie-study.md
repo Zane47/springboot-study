@@ -4748,7 +4748,7 @@ for (ItemCommentVO vo : list) {
 
 # 商品搜索
 
-## 功能详述与sql编写
+## 搜索框搜索与sql
 
 ![image-20220119224035926](img/foodie-study/image-20220119224035926.png)
 
@@ -4794,7 +4794,38 @@ from items_spec
 group by item_id;
 ```
 
-## 实现商品搜索功能
+---
+
+前台的搜索框搜索
+
+```javascript
+searchInBackend(keywords, sort, page, pageSize) {
+    // debugger;
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.get(serverUrl + '/items/search?keywords=' + keywords + "&sort=" + sort + "&page=" + page + "&pageSize=" + pageSize, {})
+        .then(res => {
+        if (res.data.status == 200) {
+            var grid = res.data.data;
+            var itemsList = grid.rows;
+            this.itemsList = itemsList;
+
+            var maxPage = grid.total;		// 获得总页数
+            var total = grid.records;		// 获得总记录数
+
+            this.maxPage = maxPage;
+            this.total = total;
+
+            // console.log(itemsList);
+        } else if (res.data.status == 500) {
+            alert(res.data.msg);
+            return;
+        }
+    });
+},
+```
+
+## 实现搜索框搜索功能
 
 1. itemsCustomMapper.xml中配置
 
@@ -4938,47 +4969,285 @@ public JsonResult searchByKeywords(
 
 前端的搜索结果页: catItems.html
 
+## 前端业务与分类搜索
+
+前端搜索逻辑:
+
+1.首页index.html中
+
+```html
+<form>
+    <input id="searchInput" v-model="keywords" name="index_none_header_sysc" type="text"
+           placeholder="搜索" autocomplete="off">
+    <input id="ai-topsearch" @click="doSearch" class="submit am-btn" value="搜索" index="1">
+</form>
+```
+
+v-model: 数据的双向绑定, 文本框输入之后, 用户可以通过this.keywords获得相应内容
+
+查看doSearch
+
+```javascript
+doSearch() {
+    var keywords = this.keywords;
+    // console.log(keywords);
+    if (keywords == null || keywords == undefined || keywords == '') {
+        alert("搜索内容不能为空");
+        return;
+    }
+    // window.location.href = "search.html?keywords=" + keywords;
+    window.open("catItems.html?searchType=searchItems&keywords=" + keywords);
+    // window.open("search.html?searchType=searchItems&keywords=" + keywords);
+},
+```
+
+这里的searchType = searchItems, 说明是文本框输入的搜索.
+
+还有其他类型的搜索, 例如在首页的分类中点击三级分类的时候, 就是通过三级分类的分类id进行查找当前分类下的所有商品. 搜索也和之前的是同一个
+
+![image-20220120171922434](img/foodie-study/image-20220120171922434.png)
+
+所以, 搜索结果页可以通过两个途径进入: -> 前端中按照searchType来区分
+
+* 首页或者其他页面的搜索框键入关键字进行搜索 -> searchItems
+* 首页的分类中点击三级分类通过分类id查找当前分类下的所有商品 -> catItems
+
+index.html中 searchType=catItems
+
+```javascript
+if (subCatHtml == null || subCatHtml == '' || subCatHtml == undefined) {
+    if (rootCatId != undefined && rootCatId != null && rootCatId != '') {
+        // 根据root分类id查询该分类下的所有子分类
+        axios.get(
+            serverUrl + '/index/subCat/' + rootCatId, {})
+            .then(res => {
+            if (res.data.status == 200) {
+                var catList = res.data.data
+                // this.catList = catList;
+                // debugger;
+                var subRenderHtml = '';
+                for (var i = 0; i < catList.length; i++) {
+                    var cat = catList[i];
+                    subRenderHtml += '' +
+                        '<dl class="dl-sort">' +
+                        '<dt><span title="' + cat.name + '">' +
+                        cat.name + '</span></dt>';
+
+                    // 拼接第三级分类
+                    var subCatList = cat.subCategoryList;
+                    for (var j = 0; j < subCatList.length; j++) {
+                        var subCat = subCatList[j];
+                        subRenderHtml += '<dd><a title="' + subCat
+                            .subName + '" href="catItems.html?searchType=catItems&catId='+ subCat.subId +'" target="_blank"><span>' +
+                            subCat.subName + '</span></a></dd>'
+                    }
+
+                    subRenderHtml += '</dl>';
+                }
+                subWapper.html(subRenderHtml);
+                meLi.addClass("hover");
+                meLi.children("div.menu-in").css("display",
+                                                 "block");
+            }
+        });
+    }
+}
+```
 
 
 
+在catItems.html中的create()对searchType的处理
 
+```javascript
+var searchType = app.getUrlParam("searchType");
+if (searchType == null || searchType == undefined || searchType == '') {
+    return false;
+} else if (searchType == "searchItems") {
+    this.searchType = searchType;
 
+    var keywords = app.getUrlParam("keywords");
+    if (keywords == null || keywords == undefined || keywords == '') {
+        return;
+    }
+    this.keywords = keywords;
 
-## 前端业务与分类搜索查询
+    this.searchInBackend(keywords, "k", 1, 20);
+} else if (searchType == "catItems") {
+    this.searchType = searchType;
+    // 从别的页面来的搜索
+    var catId = app.getUrlParam("catId");
+    if (catId == null || catId == undefined || catId == '') {
+        return;
+    }
+    this.catId = catId;
 
+    this.searchCatItemsInBackend(catId, "k", page, pageSize);
+}
+```
 
+```javascript
+searchCatItemsInBackend(catId, sort, page, pageSize) {
+    // debugger;
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.get(serverUrl + '/items/catItems?catId=' + catId + "&sort=" + sort + "&page=" + page + "&pageSize=" + pageSize, {})
+        .then(res => {
+        if (res.data.status == 200) {
+            var grid = res.data.data;
+            var itemsList = grid.rows;
+            this.itemsList = itemsList;
 
+            var maxPage = grid.total;		// 获得总页数
+            var total = grid.records;		// 获得总记录数
 
+            this.maxPage = maxPage;
+            this.total = total;
 
+            // console.log(itemsList);
+        } else if (res.data.status == 500) {
+            alert(res.data.msg);
+            return;
+        }
+    });
+},
+```
 
+在后端角度来看, 这两个搜索在一个接口中可以实现. 从前端的角度来看, 这两次搜索的入口不一样, 一个是搜索框, 一个是首页的分类选择.
 
-
-
-
-
-
+-> 但是如果后续发展的话, 写在一个接口的耦合度会较高, 后续访问量大接口性能也下降. -> 前期考虑到, 直接分成两个接口
 
 ## 实现分类搜索商品查询
 
+1.mapperl.xml中
 
+直接复制搜索框搜索的内容, 进行修改即可. items表中的cat_id字段
 
+```xml
+<!-- 通过分类id搜索商品列表 -->
+<select id="searchItemsByThirdCategoryId" parameterType="Map" resultType="com.imooc.pojo.vo.SearchItemsVO">
+    select i.id as itemId,
+    i.item_name as itemName,
+    i.sell_counts as sellCounts,
+    ii.url as imgUrl,
+    temp_spec.price_discount as price
+    from items i
+    left join items_img ii on i.id = ii.item_id
+    left join (select item_id,
+    MIN(price_discount) as price_discount
+    from items_spec
+    group by item_id) temp_spec on i.id = temp_spec.item_id
+    where ii.is_main = 1
+    and i.cat_id = #{paramsMap.thirdCategoryId}
+    order by
+    <choose>
+        <!-- k: 默认，代表默认排序，根据name-->
+        <!-- c: 根据销量排序-->
+        <!-- p: 根据价格排序-->
+        <when test="paramsMap.sort == &quot;c&quot;">
+            i.sell_counts desc
+        </when>
+        <when test="paramsMap.sort == &quot;p&quot;">
+            temp_spec.price_discount asc
+        </when>
+        <otherwise>
+            i.item_name asc
+        </otherwise>
+    </choose>
+</select>
+```
 
+ItemsMapperCustom接口中新增
 
+```java
+package com.imooc.mapper;
+public interface ItemsMapperCustom {
+    public List<ItemCommentVO> queryItemComments(@Param("paramsMap") Map<String, Object> map);
+    public List<SearchItemsVO> searchItems(@Param("paramsMap") Map<String, Object> map);
+    public List<SearchItemsVO> searchItemsByThirdCategoryId(@Param("paramsMap") Map<String, Object> map);
+}
+```
 
+2. service层
 
+接口:
 
+```java
+/**
+     * 根据三级分类id搜索商品
+     */
+public PagedGridResult searchItemsByThirdCategoryId(Integer thirdCategoryId, String sort,Integer page, Integer pageSize);
+```
 
+impl
 
+```java
+/**
+     * 根据三级分类id搜索商品
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public PagedGridResult searchItemsByThirdCategoryId(Integer thirdCategoryId, String sort,
+                                                    Integer page, Integer pageSize) {
 
+    Map<String, Object> paramsMap = new HashMap<>();
+    paramsMap.put("thirdCategoryId", thirdCategoryId);
+    paramsMap.put("sort", sort);
 
+    PageHelper.startPage(page, pageSize);
 
+    List<SearchItemsVO> list = itemsMapperCustom.searchItemsByThirdCategoryId(paramsMap);
 
+    return setterPagedGrid(list, page);
+}
+```
 
+3. api层
 
+```java
+/**
+     * 通过分类id搜索商品列表
+     */
+@ApiOperation(value = "searchItemsByCategoryId", notes = "searchItemsByCategoryId", httpMethod = "GET")
+@GetMapping("/catItems")
+public JsonResult catItems(
+    @ApiParam(name = "catId", value = "catId", required = true)
+    @RequestParam Integer catId,
+    @ApiParam(name = "sort", value = "sort", required = false)
+    @RequestParam String sort,
+    @ApiParam(name = "page", value = "page", required = false)
+    @RequestParam Integer page,
+    @ApiParam(name = "pageSize", value = "pageSize", required = false)
+    @RequestParam Integer pageSize) {
+    if (catId == null) {
+        return JsonResult.errorMsg("wrong category id");
+    }
 
+    // ------------------------ 设置默认值 ------------------------
+    if (page == null) {
+        page = 1;
+    }
 
+    if (pageSize == null) {
+        pageSize = COMMON_PAGE_SIZE;
+    }
 
+    PagedGridResult pagedGridResult = itemService.searchItemsByThirdCategoryId(catId, sort, page, pageSize);
 
+    return JsonResult.ok(pagedGridResult);
+}
+```
+
+4. 测试
+
+首页点击某个三级分类
+
+![image-20220120183629300](img/foodie-study/image-20220120183629300.png)
+
+搜索结果
+
+<img src="img/foodie-study/image-20220120183636366.png" alt="image-20220120183636366" style="zoom:50%;" />
+
+![image-20220120183658368](img/foodie-study/image-20220120183658368.png)
 
 
 # 购物车

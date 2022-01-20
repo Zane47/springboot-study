@@ -21,6 +21,8 @@ public class ItemsController extends BaseController {
     @Autowired
     private ItemService itemService;
 
+    // ------------------------ 商品详情 ------------------------
+
     /**
      * 查询商品详情
      */
@@ -95,6 +97,8 @@ public class ItemsController extends BaseController {
     }
 
 
+    // ------------------------ 搜索 ------------------------
+
     /**
      * 搜索商品列表
      */
@@ -130,8 +134,38 @@ public class ItemsController extends BaseController {
         return JsonResult.ok(pagedGridResult);
     }
 
+    /**
+     * 通过分类id搜索商品列表
+     */
+    @ApiOperation(value = "searchItemsByCategoryId", notes = "searchItemsByCategoryId", httpMethod = "GET")
+    @GetMapping("/catItems")
+    public JsonResult catItems(
+            @ApiParam(name = "catId", value = "catId", required = true)
+            @RequestParam Integer catId,
+            @ApiParam(name = "sort", value = "sort", required = false)
+            @RequestParam String sort,
+            @ApiParam(name = "page", value = "page", required = false)
+            @RequestParam Integer page,
+            @ApiParam(name = "pageSize", value = "pageSize", required = false)
+            @RequestParam Integer pageSize) {
+        if (catId == null) {
+            return JsonResult.errorMsg("wrong category id");
+        }
+
+        // ------------------------ 设置默认值 ------------------------
+        if (page == null) {
+            page = 1;
+        }
+
+        if (pageSize == null) {
+            pageSize = COMMON_PAGE_SIZE;
+        }
+
+        PagedGridResult pagedGridResult = itemService.searchItemsByThirdCategoryId(catId, sort, page, pageSize);
 
 
+        return JsonResult.ok(pagedGridResult);
+    }
 
 
 }
