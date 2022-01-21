@@ -5374,7 +5374,7 @@ addToCart() {
 
     // 购物车应该在登录/注册的时候同步
 
-    // 判断当前用户是否登录，如果登录，则把购物车数据发送至后端（后端需要合并已存在的商品）
+    // 判断当前用户是否登录，如果登录，则把购物车数据发送至后端（后端需要合并已存在的商品）Redis
     var userIsLogin = this.userIsLogin;
     if (userIsLogin) {
         var userInfo = this.userInfo;
@@ -5482,27 +5482,362 @@ shopcartItem构建展示的内容
 
 ![image-20220120225310176](img/foodie-study/image-20220120225310176.png)
 
+可以看到在用户登陆的时候, 会将购物车的数据发送给后端Redis, 这里先实现接口避免报错, 后续再实现redis
+
+```javascript
+axios.post(
+    serverUrl + '/shopcart/add?userId=' + userInfo.id,
+    shopcartItem, {
+        headers: {
+            'headerUserId': userInfo.id,
+            'headerUserToken': userInfo.userUniqueToken
+        }
+    })
+    .then(res => {
+    if (res.data.status == 200) {
+
+    } else if (res.data.status == 500) {
+        alert(res.data.msg);
+    }
+});
+```
+
+---
+
+在获取到了购物车信息之后, 就做了循环
+
+```html
+
+<ul class="item-content clearfix" v-for="(cartItem, sidx) in shopcartList">
+    <li class="td td-chk">
+        <div class="cart-checkbox ">
+            <input class="check" v-model="specIds" :value="cartItem.specId" type="checkbox">
+        </div>
+    </li>
+    <li class="td td-item" style="width: 50%">
+        <div class="item-pic">
+            <a :href="'item.html?itemId=' + cartItem.itemId" target="_blank" class="J_MakePoint">
+                <img :src="cartItem.itemImgUrl" class="itempic J_ItemImg" style="width: 80px; height: 80px;"></a>
+        </div>
+        <div class="item-info">
+            <div class="item-basic-info">
+                <a :href="'item.html?itemId=' + cartItem.itemId" target="_blank" class="item-title J_MakePoint">{{cartItem.itemName}}</a>
+                <div class="item-props" style="margin-top: 5px;">
+                    <span class="sku-line">规格：{{cartItem.specName}}</span>
+                </div>
+            </div>
+        </div>
+    </li>
+    <li class="td td-price">
+        <div class="item-price price-promo-promo">
+            <div class="price-content">
+                <div class="price-line">
+                    <em class="price-original">{{cartItem.priceNormal / 100}}</em>
+                </div>
+                <div class="price-line">
+                    <em class="J_Price price-now" tabindex="0">{{cartItem.priceDiscount / 100}}</em>
+                </div>
+            </div>
+        </div>
+    </li>
+    <li class="td td-amount">
+        <div class="amount-wrapper ">
+            <div class="item-amount ">
+                <div class="sl">
+                    {{cartItem.buyCounts}}
+                </div>
+            </div>
+        </div>
+    </li>
+    <li class="td td-sum">
+        <div class="td-inner">
+            <em tabindex="0" class="J_ItemSum number">{{cartItem.priceDiscount / 100 * cartItem.buyCounts}}</em>
+        </div>
+    </li>
+    <li class="td td-op">
+        <div class="td-inner">
+            <a href="javascript:void(0);" @click="delFromCart(cartItem.specId)" data-point-url="#" class="delete">删除</a>
+        </div>
+    </li>
+</ul>
+```
+
+### 登陆后加入购物车
+
+todo: 加入购物车时需要判断权限, 涉及到拦截器等, -> 分布式缓存Redis
+
+这里先将controller写好, 避免报错
+
+1. api层中新增controller接收post请求
+
+```java
+package com.imooc.controller;
+
+import com.imooc.pojo.bo.ShopcartBO;
+import com.imooc.utils.JsonResult;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@Api(value = "shopcartapi", tags = {"shopping cart api"})
+@RequestMapping("shopcart")
+@RestController
+public class ShopcartController {
+
+    /**
+     * 前端用户在登录的情况下，添加商品到购物车，会同时在后端同步购物车到redis缓存
+     */
+    @ApiOperation(value = "addToShopcart", notes = "add to shop cart", httpMethod = "POST")
+    @PostMapping("/add")
+    public JsonResult add(
+            @RequestParam String userId,
+            @RequestBody ShopcartBO shopcartBO) {
+
+        // 加入购物车时需要判断权限, 涉及到拦截器等, -> 分布式缓存Redis
+        if (StringUtils.isBlank(userId)) {
+            return JsonResult.errorMsg("blank user id");
+        }
+
+        // todo:前端用户在登录的情况下，添加商品到购物车，会同时在后端同步购物车到redis缓存
 
 
+        System.out.println(shopcartBO);
 
+        return JsonResult.ok();
+    }
+}
+```
 
+pojo中添加ShopcartBO
 
+```java
+package com.imooc.pojo.bo;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
+@Setter
+@Getter
+@ToString
+public class ShopcartBO {
+    private String itemId;
+    private String itemImgUrl;
+    private String itemName;
+    private String specId;
+    private String specName;
+    private Integer buyCounts;
+    private String priceDiscount;
+    private String priceNormal;
+}
+```
 
+然后前端登陆后加入购物车就可以看到后台中的输出了
 
-
-
-
-
-
-
-
-
-
-
+```
+ShopcartBO(itemId=cake-1001, itemImgUrl=http://122.152.205.72:88/foodie/cake-1001/img1.png, itemName=【天天吃货】真香预警 超级好吃 手撕面包 儿童早餐早饭, specId=2, specName=草莓味, buyCounts=1, priceDiscount=20000, priceNormal=20000)
+```
 
 ## 渲染(刷新)购物车
+
+在页面中点击购物车, 发生跳转
+
+![image-20220121100310468](img/foodie-study/image-20220121100310468.png)
+
+![image-20220121100316298](img/foodie-study/image-20220121100316298.png)
+
+> 现在购物车数据存储在cookie中, 那么是否可以把cookie中的数据拿出来在这里做渲染? 
+
+> -> 不可以, 因为数据保存在前端, 是临时的, 用户加入购物车的数据不可能当时就结算, 可能过了一段时间再打开, 那么价格就还是加入时的价格(cookies中的). 所以用户进入购物车页面的时候, 需要刷新数据, 更新数据规格, 除了数量不用更新, 其他的尤其是金额, 需要更新. -> 所以把数据(规格id)发送到后端查询相关的最新数据, 在进行展示
+
+shopcart.html的页面, 去create()生命周期中查看渲染购物车逻辑renderShopcart
+
+```javascript
+renderShopcart() {
+    var shopcartList = app.getShopcartList();
+
+    // console.log(shopcartList);
+    // this.shopcartList = shopcartList;
+
+    if (shopcartList.length <= 0) {
+        return;
+    }
+
+    // 刷新购物车中价格，以防长时间未登录网址，价格发生变动
+    // 拼接规格ids
+    var itemSpecIds = "";
+    for (var i = 0 ; i < shopcartList.length ; i ++) {
+        var tmpSpecId = shopcartList[i].specId;
+        itemSpecIds += tmpSpecId;
+        if (i < shopcartList.length-1) {
+            itemSpecIds += ",";
+        }
+    }
+    // 1001，2002，3003，4004
+
+    // 请求后端获得最新数据
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.get(
+        serverUrl + '/items/refresh?itemSpecIds=' + itemSpecIds, 
+        {},)
+        .then(res => {
+        if (res.data.status == 200) {
+            var newItemList = res.data.data;
+            // 删除现有购物车cookie
+            app.deleteCookie("shopcart");
+            // console.log(newItemList);
+            // 拿到最新商品数据以后，重新组合成购物车数据
+            for (var i = 0 ; i < newItemList.length ; i ++) {
+                var tmpNewItem = newItemList[i];
+                var tmpNewItemSpecId = tmpNewItem.specId;
+                var buyCounts = this.getBuyCountsFromCookieShopcartList(shopcartList, tmpNewItemSpecId);
+                // console.log(buyCounts);
+
+                // 构建购物车商品对象
+                var shopcartItem = new app.ShopcartItem(tmpNewItem.itemId, 
+                                                        tmpNewItem.itemImgUrl,
+                                                        tmpNewItem.itemName, 
+                                                        tmpNewItem.specId, 
+                                                        tmpNewItem.specName, 
+                                                        buyCounts, 
+                                                        tmpNewItem.priceDiscount, 
+                                                        tmpNewItem.priceNormal);
+                // 添加商品至购物车list
+                app.addItemToShopcart(shopcartItem);
+            }
+            // 重新获取cookie中的商品list渲染到页面
+            shopcartList = app.getShopcartList();
+            // console.log(shopcartList);
+            this.shopcartList = shopcartList;	
+        } else if (res.data.status == 500) {
+            alert(res.data.msg);
+        }
+    });
+},
+```
+
+存储在购物车的数据就是按照规格来进行存储的. 
+
+将规格id拼接字符串: 1001,1002..这样子的规则
+
+然后到后端中查询最新的商品规格(重点是价格), 更新前台的页面
+
+---
+
+1. mapper
+
+刷新购物车中商品数据sql:
+
+```mysql
+select t_items.id                  as itemId,
+       t_items.item_name           as itemName,
+       t_items_img.url             as itemImgUrl,
+       t_items_spec.id             as specId,
+       t_items_spec.name           as specName,
+       t_items_spec.price_discount as priceDiscount,
+       t_items_spec.price_normal   as priceNormal
+from items_spec t_items_spec
+         left join items t_items on t_items_spec.item_id = t_items.id
+         left join items_img t_items_img on t_items_spec.item_id = t_items_img.item_id
+where t_items_img.is_main = 1
+  and t_items_spec.id in ('1', '3', '5');
+```
+
+在ItemsMapperCustom.xml中
+
+```xml
+!-- 购物车中按照拼接的规格id查询信息 -->
+<select id="queryItemsByJointSpecIds" parameterType="List" resultType="com.imooc.pojo.vo.ShopcartVO">
+    select t_items.id                  as itemId,
+    t_items.item_name           as itemName,
+    t_items_img.url             as itemImgUrl,
+    t_items_spec.id             as specId,
+    t_items_spec.name           as specName,
+    t_items_spec.price_discount as priceDiscount,
+    t_items_spec.price_normal   as priceNormal
+    from items_spec t_items_spec
+    left join items t_items on t_items_spec.item_id = t_items.id
+    left join items_img t_items_img on t_items_spec.item_id = t_items_img.item_id
+    where t_items_img.is_main = 1
+    and t_items_spec.id in
+    <!-- item: 循环元素的名称; -->
+    <foreach collection="paramsList" index="index" item="specId" open="(" separator="," close=")">
+        #{specId}
+    </foreach>
+</select>
+```
+
+在接口中ItemsMapperCustom.java
+
+```java
+public interface ItemsMapperCustom {
+    public List<ShopcartVO> queryItemsByJointSpecIds(@Param("paramsList") List specIds);
+}
+```
+
+2.service
+
+接口ItemService
+
+```java
+/**
+     * 根据拼接的规格ids查询最新的购物车中商品数据(用于刷新渲染购物车中的商品数据)
+     */
+public List<ShopcartVO> queryItemsByJointSpecIds(String jointSpecIds);
+```
+
+impl中
+
+```java
+/**
+     * 根据拼接的规格ids查询最新的购物车中商品数据(用于刷新渲染购物车中的商品数据)
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public List<ShopcartVO> queryItemsByJointSpecIds(String jointSpecIds) {
+
+    String[] ids = jointSpecIds.split(",");
+
+    List<String> specIds = new ArrayList<>();
+
+    Collections.addAll(specIds, ids);
+
+    return itemsMapperCustom.queryItemsByJointSpecIds(specIds);
+}
+```
+
+3. api层
+
+```java
+/**
+     * 用于用户长时间未登录网站, 刷新购物车中的数据(主要是商品价格), 类似京东淘宝
+     */
+@ApiOperation(value = "queryItemsByJointSpecIds", notes = "根据拼接的商品规格ids查找最新的商品数据", httpMethod = "GET")
+@GetMapping("/refresh")
+public JsonResult refresh(
+    @ApiParam(name = "itemSpecIds", value = "拼接的规格ids", required = true, example = "1001,1003,1005")
+    @RequestParam String itemSpecIds) {
+
+    if (StringUtils.isBlank(itemSpecIds)) {
+        return JsonResult.ok();
+    }
+
+    List<ShopcartVO> list = itemService.queryItemsByJointSpecIds(itemSpecIds);
+
+    return JsonResult.ok(list);
+}
+```
+
+
+
+
+
+
 
 
 

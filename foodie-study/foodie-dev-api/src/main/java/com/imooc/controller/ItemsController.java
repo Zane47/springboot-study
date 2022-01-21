@@ -2,6 +2,7 @@ package com.imooc.controller;
 
 import com.imooc.pojo.vo.CommentLevelCountsVO;
 import com.imooc.pojo.vo.ItemInfoVO;
+import com.imooc.pojo.vo.ShopcartVO;
 import com.imooc.service.ItemService;
 import com.imooc.utils.JsonResult;
 import com.imooc.utils.PagedGridResult;
@@ -11,6 +12,8 @@ import io.swagger.annotations.ApiParam;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 
 @Api(value = "items api", tags = {"items information presentation api"})
@@ -166,6 +169,27 @@ public class ItemsController extends BaseController {
 
         return JsonResult.ok(pagedGridResult);
     }
+
+
+    /**
+     * 用于用户长时间未登录网站, 刷新购物车中的数据(主要是商品价格), 类似京东淘宝
+     */
+    @ApiOperation(value = "queryItemsByJointSpecIds", notes = "根据拼接的商品规格ids查找最新的商品数据", httpMethod = "GET")
+    @GetMapping("/refresh")
+    public JsonResult refresh(
+            @ApiParam(name = "itemSpecIds", value = "joint item specId", required = true, example = "1001,1003,1005")
+            @RequestParam String itemSpecIds) {
+
+        if (StringUtils.isBlank(itemSpecIds)) {
+            return JsonResult.ok();
+        }
+
+        List<ShopcartVO> list = itemService.queryItemsByJointSpecIds(itemSpecIds);
+
+        return JsonResult.ok(list);
+    }
+
+
 
 
 }
