@@ -5833,39 +5833,157 @@ public JsonResult refresh(
 }
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## 选中商品的计算业务
 
+![image-20220121194426553](img/foodie-study/image-20220121194426553.png)
 
+前端的逻辑
 
+```javascript
+watch: { //深度 watcher
+    'specIds': {
+        handler: function(val, oldVal) {
+            if (val.length === this.shopcartList.length) {
+                this.allChecked = true;
+            } else {
+                this.allChecked = false;
+            }
+            this.reCalItemsCountsAndAmount();
+        },
+            deep: true
+    }
+},
+    reCalItemsCountsAndAmount() {
+        var specIds = this.specIds;
+        if (specIds == null || specIds == '' || specIds == undefined || specIds.length == 0) {
+            this.allSelectedCounts = 0;
+            this.totalAmount = 0;
+        } else {
+            // 把specIds和cookie中的购物车进行对比
+            this.allSelectedCounts = specIds.length;
 
+            var shopcartList = app.getShopcartList();
 
+            var totalAmount = 0;
+            // debugger;
+            for (var i = 0 ; i < shopcartList.length ; i ++) {
+                var tmpItem = shopcartList[i];
 
+                for (var j = 0 ; j < specIds.length ; j ++) {
+                    var selectSpecId = specIds[j];
+                    if (tmpItem.specId == selectSpecId) {
+                        totalAmount += tmpItem.priceDiscount * tmpItem.buyCounts;
+                    }
+                }
+            }
+            this.totalAmount = totalAmount;
+        }
+    },
+```
 
-
-
-
-
-
+vue框架中提供监视功能, watch
 
 ## 删除商品业务
+
+```html
+<li class="td td-op">
+    <div class="td-inner">
+        <a href="javascript:void(0);" @click="delFromCart(cartItem.specId)" data-point-url="#" class="delete">删除</a>
+    </div>
+</li>
+```
+
+```javascript
+// 从购物车中删除商品
+delFromCart(specId) {
+    // console.log(specId);
+
+    var bool = window.confirm("确认从购物车中移除该商品吗？");
+    if (!bool) {
+        return;
+    }
+
+    // 删除cookie中的商品
+    var shopcartList = app.getShopcartList();
+    for (var i = 0 ; i < shopcartList.length ; i ++) {
+        var tmpItem = shopcartList[i];
+        if (tmpItem.specId == specId) {
+            shopcartList.splice(i, 1);
+            break;
+        }
+    }
+    // 重新放入cookie，更新一下
+    app.setCookie("shopcart", JSON.stringify(shopcartList));
+    this.shopcartList = shopcartList;
+
+    // 清除选中项
+    var specIds = this.specIds;
+    for (var i = 0 ; i < specIds.length ; i++) {
+        var tmpSpecId = specIds[i];
+        if (specId == tmpSpecId) {
+            specIds.splice(i, 1);
+        }
+    }
+    this.reCalItemsCountsAndAmount();
+
+    // 如果用户是已经登录状态，需要再把redis中的购物车商品删除
+    var userIsLogin = this.userIsLogin;
+    if (userIsLogin) {
+        var userInfo = this.userInfo;
+        var serverUrl = app.serverUrl;
+        axios.defaults.withCredentials = true;
+        axios.post(
+            serverUrl + '/shopcart/del?userId=' + userInfo.id + '&itemSpecId=' + specId, 
+            {}, 
+            {
+                headers: {
+                    'headerUserId': userInfo.id,
+                    'headerUserToken': userInfo.userUniqueToken
+                }
+            })
+            .then(res => {
+            if (res.data.status == 200) {
+
+            } else if (res.data.status == 500) {
+                alert(res.data.msg);
+            }
+        });
+    }
+},
+```
+
+如果是未登录状态, 则在cookie中删除
+
+如果是已登陆状态, 则发送请求到后台中删除Redis -> todo
+
+这里先把登陆状态下后端删除基础的写好
+
+```java
+@ApiOperation(value = "从购物车中删除商品", notes = "从购物车中删除商品", httpMethod = "POST")
+@PostMapping("/del")
+public JsonResult del(
+    @RequestParam String userId,
+    @RequestParam String itemSpecId,
+    HttpServletRequest request,
+    HttpServletResponse response) {
+
+    if (StringUtils.isBlank(userId) || StringUtils.isBlank(itemSpecId)) {
+        return JsonResult.errorMsg("参数不能为空");
+    }
+
+    // todo: 用户在页面删除购物车中的商品数据，如果此时用户已经登录，则需要同步删除后端购物车中的商品
+
+    return JsonResult.ok();
+}
+```
+
+
+
+
+
+
+
+
 
 
 
@@ -5881,15 +5999,163 @@ public JsonResult refresh(
 
 ## 提交购物车至结算页
 
+前端结算:
 
+```html
+<div class="btn-area" @click="goPay">
+    <a href="javascript:void(0);" id="J_Go" class="submit-btn submit-btn-disabled">
+        <span>结&nbsp;算</span>
+    </a>
+</div>
+```
 
+```javascript
+// 前往结算页面
+goPay() {
+    var shopcartList = app.getShopcartList();
+    if (shopcartList.length <= 0) {
+        alert("购物车中没有商品，无法结算");
+        return;
+    }
 
+    var selectedItemSpecIds = this.specIds;
+    if (selectedItemSpecIds.length <= 0) {
+        alert("请至少在购物车中选择一个商品后再结算");
+        return;
+    }
 
+    // 判断是否登录
+    var userIsLogin = this.userIsLogin;
+    if (userIsLogin) {
+        var specIdsStr = selectedItemSpecIds.toString();
+        window.location.href = "pay.html?selectedItemSpecIds=" + specIdsStr;
+    } else {
+        var bool = window.confirm("请登录/注册后再进行结算操作噢~！");
+        if (!bool) {
+            return;
+        } else {
+            this.goLogin();
+        }
+    }
+},
+```
 
+如果没有登陆, 就会提示需要登陆, 登陆页面中会有returnUrl重新导向shopcart页面
 
+![image-20220121210614483](img/foodie-study/image-20220121210614483.png)
 
+在login中查看逻辑
 
+```javascript
+doLogin() {
 
+    if (this.userName == null || this.userName == undefined || this.userName == '') {
+        alert("用户名不能为空");
+        return;
+    } else if (this.password == null || this.password == undefined || this.password == '') {
+        alert("密码不能为空");
+        return;
+    } else if (this.password.length < 6) {
+        alert("密码不能少于6位");
+        return;
+    }
+
+    var userBO = {
+        userName: this.userName,
+        password: this.password
+    };
+    // console.log(userBO);
+
+    var serverUrl = app.serverUrl;
+
+    var returnUrl = this.returnUrl;
+    // form提交
+    axios.defaults.withCredentials = true;
+    // console.log(axios.defaults);
+    axios.post(serverUrl + '/passport/login', userBO)
+        .then(res => {
+        if (res.data.status == 200) {
+            var user = res.data;
+            // console.log(user);
+
+            // window.location.href = app.ctx + "/index.html";
+            if (returnUrl != null && returnUrl != undefined && returnUrl != '') {
+                window.location.href = returnUrl;
+            } else {
+                window.location.href = "index.html";
+            }
+
+        } else if (res.data.status == 500) {
+            alert(res.data.msg);
+            return;
+        }
+    });
+```
+
+可以看到如果有returnUrl就会返回到该地址
+
+---
+
+点击结算之后, 跳转到pay.html
+
+<img src="img/foodie-study/image-20220121210803716.png" alt="image-20220121210803716" style="zoom: 50%;" />
+
+pay.html中查看, create()生命周期
+
+```javascript
+created() {
+    this.updateCity();
+    this.updateDistrict();
+
+    // var me = this;
+    // 通过cookie判断用户是否登录
+    this.judgeUserLoginStatus();
+
+    // 渲染结算订单信息
+    this.renderOrderInfoList();
+
+    // 渲染地址信息
+    this.renderUserAddressList();
+},
+```
+
+其中的renderOrderInfoList来渲染订单的信息
+
+```javascript
+renderOrderInfoList() {
+    var selectedItemSpecIds = app.getUrlParam("selectedItemSpecIds");
+    if (selectedItemSpecIds == null || selectedItemSpecIds == '' || selectedItemSpecIds ==
+        undefined) {
+        app.goErrorPage();
+    }
+
+    var specIdsArray = new Array();
+    specIdsArray = selectedItemSpecIds.split(",");
+
+    var orderItemList = [];
+    var totalAmount = 0;
+    for (var i = 0; i < specIdsArray.length; i++) {
+        var tmpSpecId = specIdsArray[i];
+        var orderItem = this.getItemFromCookieShopcartList(tmpSpecId);
+        orderItemList.push(orderItem);
+        totalAmount += (orderItem.priceDiscount * orderItem.buyCounts);
+    }
+    // console.log(orderItemList);
+    this.orderItemList = orderItemList;
+    this.totalAmount = totalAmount;
+
+    if (orderItemList.length <= 0) {
+        alert("没有商品信息，或订单已经提交");
+        window.location.href = "shopcart.html";
+    }
+},
+```
+
+selectedItemSpecIds从购物车页面中传来, 如果有多个以逗号做间隔: 
+
+`http://localhost:8080/foodie-shop/pay.html?selectedItemSpecIds=1,food-1002-spec-1`
+
+orderItemList中存储订单信息
 
 
 
