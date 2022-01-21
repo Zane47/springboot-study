@@ -8,7 +8,7 @@ import lombok.ToString;
 @Setter
 @ToString
 public class AddressBO {
-    // private String AddressId;
+    private String addressId;
 
     private String userId;
     private String receiver;
