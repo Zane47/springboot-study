@@ -6157,31 +6157,229 @@ selectedItemSpecIds从购物车页面中传来, 如果有多个以逗号做间�
 
 orderItemList中存储订单信息
 
+---
 
+结算页查看
 
-
-
-
-
-
-
-
+![image-20220121213918220](img/foodie-study/image-20220121213918220.png)
 
 # 收货地址
 
 ## 需求分析与表设计
 
+![image-20220121214024205](img/foodie-study/image-20220121214024205.png)
 
+显示所有的地址, 可以新增地址, 编辑地址, 删除, 设置为默认地址
 
+---
 
+用户地址表: user_address
+
+<img src="img/foodie-study/image-20220121215932220.png" alt="image-20220121215932220" style="zoom:67%;" />
+
+其中的省市区在js中维护. 
+
+![image-20220121220039506](img/foodie-study/image-20220121220039506.png)
+
+json数组, 包含了省市区. 如果不放在js维护, 也可以放在数据库中维护, 放在数据库管理方便, 但是前端查询需要额外的请求. js文件的话那么地址信息就在前端维护, 时效性一般6个月. 
+
+---
+
+新建AddressController
+
+```java
+package com.imooc.controller;
+
+import io.swagger.annotations.Api;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 用户在确认订单页面，可以针对收货地址做如下操作：
+ * 1. 查询用户的所有收货地址列表
+ * 2. 新增收货地址
+ * 3. 删除收货地址
+ * 4. 修改收货地址
+ * 5. 设置默认地址
+ */
+@Api(value = "address", tags = {"address related api"})
+@RequestMapping("address")
+@RestController
+public class AddressController {}
+```
 
 ## 查询收货地址列表
+
+
+
+前台的渲染地址信息
+
+```javascript
+renderUserAddressList() {
+    var userInfo = this.userInfo;
+    // 请求后端获得最新数据
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.post(
+        serverUrl + '/address/list?userId=' + userInfo.id, {}, 
+        {
+            headers: {
+                'headerUserId': userInfo.id,
+                'headerUserToken': userInfo.userUniqueToken
+            }
+        })
+        .then(res => {
+        if (res.data.status == 200) {
+            var addressList = res.data.data;
+            // console.log(addressList);
+            this.addressList = addressList;
+
+            // 设置默认应该选中的地址id
+            this.setDefaultChoosedAddressId(addressList);
+
+            // 清空地址内容
+            this.flushAddressForm();
+        } else if (res.data.status == 500) {
+            alert(res.data.msg);
+            console.log(res.data.msg);
+        } else {
+            alert(res.data.msg);
+            console.log(res.data.msg);
+        }
+    });
+},
+```
+
+
+
+
+
+
+
+
 
 
 
 
 
 ## 新增收货地址
+
+
+
+
+
+```javascript
+// 创建用户新地址
+saveNewAddressOrUpdate() {
+    var receiver = this.receiver;
+    if (receiver == null || receiver == '' || receiver == undefined) {
+        alert("收货人姓名不能为空");
+        return;
+    }
+    if (receiver.length > 12) {
+        alert("收货人姓名不能太长");
+        return;
+    }
+
+    var mobile = this.mobile;
+    if (mobile == null || mobile == '' || mobile == undefined) {
+        alert("手机不能为空");
+        return;
+    }
+    if (mobile.length != 11) {
+        alert("手机号长度为11位");
+        return;
+    }
+    var checkMobile = app.checkMobile(mobile);
+    if (!checkMobile) {
+        alert('请输入有效的手机号码！');
+        return;
+    }
+
+    var prov = this.prov;
+    var city = this.city;
+    var district = this.district;
+
+    var detail = this.detail;
+    if (detail == null || detail == '' || detail == undefined) {
+        alert("详细地址不能为空");
+        return;
+    }
+
+    // 添加新地址
+    var userInfo = this.userInfo;
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+
+    var addressId = this.updatedAddressId;
+
+    // 地址id为空，则新增地址，否则更新地址
+    if (addressId == "" || addressId == undefined || addressId == null) {
+        axios.post(
+            serverUrl + '/address/add', 
+            {
+                "userId": userInfo.id,
+                "receiver": receiver,
+                "mobile": mobile,
+                "province": prov,
+                "city": city,
+                "district": district,
+                "detail": detail
+            },
+            {
+                headers: {
+                    'headerUserId': userInfo.id,
+                    'headerUserToken': userInfo.userUniqueToken
+                }
+            })
+            .then(res => {
+            if (res.data.status == 200) {
+                this.closeAddressDialog();
+                this.renderUserAddressList();
+
+                // 设置更新地址的id为空
+                this.updatedAddressId = "";
+            } else if (res.data.status == 500) {
+                alert(res.data.msg);
+            }
+        });
+    } else {
+        axios.post(
+            serverUrl + '/address/update', 
+            {
+                "addressId": addressId,
+                "userId": userInfo.id,
+                "receiver": receiver,
+                "mobile": mobile,
+                "province": prov,
+                "city": city,
+                "district": district,
+                "detail": detail
+            },
+            {
+                headers: {
+                    'headerUserId': userInfo.id,
+                    'headerUserToken': userInfo.userUniqueToken
+                }
+            })
+            .then(res => {
+            if (res.data.status == 200) {
+                this.closeAddressDialog();
+                this.renderUserAddressList();
+            } else if (res.data.status == 500) {
+                alert(res.data.msg);
+            }
+        });
+    }
+
+},
+```
+
+
+
+
+
+
 
 
 
@@ -6195,7 +6393,55 @@ orderItemList中存储订单信息
 
 
 
+
+
+
+
+
+
 ## 删除收货地址
+
+
+
+```javascript
+deleteAddress(addressId) {
+    var isDel = window.confirm("确认删除改地址吗");
+    if (!isDel) {
+        return;
+    }
+
+    // 如果删除的地址是默认地址或者选中地址，则choosedAddressId和defaultAddressId要设置为空
+    if (addressId == this.choosedAddressId) {
+        this.choosedAddressId = "";
+    }
+
+    if (addressId == this.defaultAddressId) {
+        this.defaultAddressId = "";
+    }
+
+    var userInfo = this.userInfo;
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.post(
+        serverUrl + '/address/delete?userId=' + userInfo.id + "&addressId=" + addressId, 
+        {},
+        {
+            headers: {
+                'headerUserId': userInfo.id,
+                'headerUserToken': userInfo.userUniqueToken
+            }
+        })
+        .then(res => {
+        if (res.data.status == 200) {
+            this.renderUserAddressList();
+        } else {
+            alert(res.data.msg);
+        }
+    });
+},
+```
+
+
 
 
 
@@ -6208,6 +6454,30 @@ orderItemList中存储订单信息
 
 
 
+
+```javascript
+setDefaultAddress(addressId) {
+    var userInfo = this.userInfo;
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.post(
+        serverUrl + '/address/setDefalut?userId=' + userInfo.id + "&addressId=" + addressId, 
+        {},
+        {
+            headers: {
+                'headerUserId': userInfo.id,
+                'headerUserToken': userInfo.userUniqueToken
+            }
+        })
+        .then(res => {
+        if (res.data.status == 200) {
+            this.renderUserAddressList();
+        } else {
+            alert(res.data.msg);
+        }
+    });
+},
+```
 
 
 
