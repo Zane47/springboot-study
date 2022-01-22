@@ -6872,45 +6872,149 @@ setDefaultAddress(addressId) {
 
 # 订单
 
+## 订单流程和订单状态
+
+### 订单流程
+
+点击"提交订单", 将订单相关信息提交流程, 进入订单流程
+
+![image-20220122101816805](img/foodie-study/image-20220122101816805.png)
+
+页面流程:
+<img src="img/foodie-study/image-20220122102235152.png" alt="image-20220122102235152" style="zoom:67%;" />
+
+用户选择商品 -> 商品加入购物车 -> 订单结算 -> 选择支付方式 -> 支付
+
+### 订单状态
+
+每个节点的订单状态:
+
+1. 订单结算
+
+2. 前往支付(待付款). 订单创建, 用户未付款
+3. 如果取消订单. 交易关闭.
+4. 继续支付, 支付成功. 
+5. 商家待发货. 用户待收货
+6. 用户确认收货后. 订单完成
+
+<img src="img/foodie-study/image-20220122102618623.png" alt="image-20220122102618623" style="zoom:67%;" />
+
+其中的"待发货"状态应该由客服管理系统或者是后台管理系统, 由商家点击发货. 这里没有商家这一角色, 所以对于此类情况, 手动修改数据库状态, 或者写接口用postman手动发送请求.
+
+### 复杂订单状态设计
+
+用户量增加, 业务更加复杂的情况下
+
+1. 待付款.
+2. 付款中. 为什么之前是付款完毕, 这里多了付款中? 因为某些情况下涉及到第三方支付平台, 例如缴费平台, 响应慢, 同步等待太慢, 不使用同步请求, 使用异步回调. 用户的钱从卡里面扣掉, 显示状态付款中, 这样子用户就可以感知到状态的变化. 
+3. 在付款中用户也可以发起订单的取消. 发送取消的请求到第三方平台, 取消订单, 退回金额给用户. 然后交易关闭
+4. 付款成功. 之后用户也可以选择取消订单, 发起退款流程, 待退款状态. -> 待退款需要公司的相关人员审核. -> 然后就是退款成功, 已退款状态. 
+5. 已发货. 用户待收货 -> 用户确认收货 -> 如果不满意也可以退款退货.
+
+<img src="img/foodie-study/image-20220122103444654.png" alt="image-20220122103444654" style="zoom:67%;" />
+
+
+
 ## 确认订单
-
-### 订单流程梳理与订单状态
-
-
-
-
-
-
-
-
-
-
 
 ### 订单表设计
 
+orders订单表:
 
+```mysql
+-- auto-generated definition
+create table orders
+(
+    id               varchar(64)  not null comment '订单主键;同时也是订单编号'
+    primary key,
+    user_id          varchar(64)  not null comment '用户id',
+    receiver_name    varchar(32)  not null comment '收货人快照',
+    receiver_mobile  varchar(32)  not null comment '收货人手机号快照',
+    receiver_address varchar(128) not null comment '收货地址快照',
+    total_amount     int          not null comment '订单总价格',
+    real_pay_amount  int          not null comment '实际支付总价格',
+    post_amount      int          not null comment '邮费;默认可以为零，代表包邮',
+    pay_method       int          not null comment '支付方式',
+    left_msg         varchar(128) null comment '买家留言',
+    extand           varchar(32)  null comment '扩展字段',
+    is_comment       int          not null comment '买家是否评价;1：已评价，0：未评价',
+    is_delete        int          not null comment '逻辑删除状态;1: 删除 0:未删除',
+    created_time     datetime     not null comment '创建时间（成交时间）',
+    updated_time     datetime     not null comment '更新时间'
+)
+    comment '订单表;' charset = utf8mb4;
+```
 
+快照: 这里收货地址不使用外键关联id, 而是把具体的值存在订单中. -> 用户的地址可能更改, 如果做外键, 可能发生错误, 找不到, 信息变更. 订单是历史数据, 不可以因为用户更改了地址而更改历史数据. -> 所以这里存放快照, 也就是用户下单时的相应的地址信息. 
 
+逻辑删除: 订单数据对于用户和平台来说很重要., 所以在删除的时候不应该真正删除, 而是使用逻辑删除, 用户删除后, 不显示给用户看, 但是仍然保留在数据库中, 对于系统来说可见 -> 用于大数据分析.
 
+---
 
+orders_items订单商品关联表:
 
+```mysql
+-- auto-generated definition
+create table order_items
+(
+    id             varchar(64)  not null comment '主键id'
+    primary key,
+    order_id       varchar(64)  not null comment '归属订单id',
+    item_id        varchar(64)  not null comment '商品id',
+    item_img       varchar(128) not null comment '商品图片',
+    item_name      varchar(32)  not null comment '商品名称',
+    item_spec_id   varchar(32)  not null comment '规格id',
+    item_spec_name varchar(32)  not null comment '规格名称',
+    price          int          not null comment '成交价格',
+    buy_counts     int          not null comment '购买数量'
+)
+    comment '订单商品关联表 ' charset = utf8mb4;
+```
 
+子订单. 因为一笔订单下可能有很多商品, 相应的商品独立成一项. 相应的商品信息保存. 外键id关联. 
 
+---
 
+订单状态order_status
+
+```mysql
+-- auto-generated definition
+create table order_status
+(
+    order_id     varchar(64) not null comment '订单ID;对应订单表的主键id'
+    primary key,
+    order_status int         not null comment '订单状态',
+    created_time datetime    null comment '订单创建时间;对应[10:待付款]状态',
+    pay_time     datetime    null comment '支付成功时间;对应[20:已付款，待发货]状态',
+    deliver_time datetime    null comment '发货时间;对应[30：已发货，待收货]状态',
+    success_time datetime    null comment '交易成功时间;对应[40：交易成功]状态',
+    close_time   datetime    null comment '交易关闭时间;对应[50：交易关闭]状态',
+    comment_time datetime    null comment '留言时间;用户在交易成功后的留言时间'
+)
+    comment '订单状态表;订单的每个状态更改都需要进行记录
+10：待付款  
+20：已付款，待发货  
+30：已发货，待收货（7天自动确认）  
+40：交易成功（此时可以评价）
+50：交易关闭（待付款时，用户取消 或 长时间未付款，系统识别后自动关闭）
+ps: 退货/退货, 此分支流程不做，所以不加入' charset = utf8mb4;
+```
+
+订单状态表和订单主表可以放在一起, 但是真实业务场景, 如果合并那么列会很多, 查询速度降低. 逻辑拆分.
 
 ### 聚合支付中心
 
+封装接口, 封装支付宝和微信支付的接口
 
+![image-20220122111425164](img/foodie-study/image-20220122111425164.png)
 
+支付的前提: 必须有企业资质才可以调用微信支付宝. 所以增加支付中心.
 
-
-
-
-
+自己也可以直接调用支付宝或者微信的api. 
 
 ### 提交并且接受订单信息
 
-
+提交订单
 
 
 
