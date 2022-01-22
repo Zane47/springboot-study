@@ -45,10 +45,10 @@ public class AddressServiceImpl implements AddressService {
     @Override
     public void addNewUserAddress(AddressBO addressBO) {
         // 1.如果当前用户不存在地址, 那么新增的则为'默认地址'
-        int isDefault = 0;
+        int isDefault = YesOrNo.NO.type;
         List<UserAddress> userAddressList = this.queryAll(addressBO.getUserId());
         if (userAddressList == null || userAddressList.isEmpty()) {
-            isDefault = 0;
+            isDefault = YesOrNo.YES.type;
         }
         String addressId = sid.nextShort();
 

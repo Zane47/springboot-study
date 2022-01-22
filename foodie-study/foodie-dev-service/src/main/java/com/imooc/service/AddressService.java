@@ -2,11 +2,6 @@ package com.imooc.service;
 
 import com.imooc.pojo.UserAddress;
 import com.imooc.pojo.bo.AddressBO;
-import org.springframework.beans.BeanUtils;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
 import java.util.List;
 
 public interface AddressService {
