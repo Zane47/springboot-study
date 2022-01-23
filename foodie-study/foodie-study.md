@@ -97,9 +97,9 @@ maven聚合拆分项目, 将项目拆成子模块, 按需给其他项目提供�
 
 ```
 1. 聚合工程里可以分为顶级项目(顶级工程、父工程)与子工程, 这两者的关系就是父子继承的关系. 
-子工程在maven里称之为模块(module), 模块之间是平级, 是可以相互依赖的。
+子工程在maven里称之为模块(module), 模块之间是平级, 是可以相互依赖的. 
 2. 子模块可以使用顶级工程里所有的资源(依赖), 子模块之间如果要使用资源, 必须构建依赖(构建关系)
-3. 一个顶级工程是可以由多个不同的子工程共同组合而成。
+3. 一个顶级工程是可以由多个不同的子工程共同组合而成. 
 ```
 
 3. 添加子项目foodie-dev-pojo
@@ -3124,7 +3124,7 @@ select * from category f left join category c on f.id = c.father_id where f.fath
 
 前半部分二级分类和后半部分三级分类
 
-LEFT JOIN 关键字从左表（table1）返回所有的行, 即使右表（table2）中没有匹配。如果右表中没有匹配, 则结果为 NULL。
+LEFT JOIN 关键字从左表（table1）返回所有的行, 即使右表（table2）中没有匹配. 如果右表中没有匹配, 则结果为 NULL。
 
 显示前端需要的内容
 
@@ -3466,9 +3466,9 @@ axios.get(serverUrl + '/index/subCat/' + rootCatId, {})
 <script type="text/javascript">
     $(window).scroll(
     function() {
-        // scrollTop为滚动条在Y轴上的滚动距离。
-        // clientHeight为内容可视区域的高度。
-        // scrollHeight为内容可视区域的高度加上溢出（滚动）的距离。
+        // scrollTop为滚动条在Y轴上的滚动距离. 
+        // clientHeight为内容可视区域的高度. 
+        // scrollHeight为内容可视区域的高度加上溢出（滚动）的距离. 
         var scrollTop = $(this).scrollTop();
         var scrollHeight = $(document).height();
         var windowHeight = $(this).height();
@@ -5337,7 +5337,7 @@ public JsonResult catItems(
 
 ```javascript
 addToCart() {
-    // 由于cookie大小限制为4k，另外课程第一阶段是没有redis的，所以相关暂存性内容会存入到cookie中
+    // 由于cookie大小限制为4k，另外课程第一阶段是没有redis的, 所以相关暂存性内容会存入到cookie中
     var shopcartCounts = app.getShopcartItemCounts();
     if (shopcartCounts >= 8) {
         alert("您购物车中的食物太多啦~请把它们带回家吧~！");
@@ -5374,7 +5374,7 @@ addToCart() {
 
     // 购物车应该在登录/注册的时候同步
 
-    // 判断当前用户是否登录，如果登录，则把购物车数据发送至后端（后端需要合并已存在的商品）Redis
+    // 判断当前用户是否登录, 如果登录, 则把购物车数据发送至后端（后端需要合并已存在的商品）Redis
     var userIsLogin = this.userIsLogin;
     if (userIsLogin) {
         var userInfo = this.userInfo;
@@ -5441,21 +5441,21 @@ ShopcartItem: function(itemId, itemImgUrl, itemName, specId, specName, buyCounts
 
 ```javascript
 addItemToShopcart(pendingItem) {
-    // 判断有没有购物车，如果没有购物车，则new 一个购物车list
-    // 如果有购物车，则直接把shopcartItem丢进去
+    // 判断有没有购物车, 如果没有购物车, 则new 一个购物车list
+    // 如果有购物车, 则直接把shopcartItem丢进去
     var foodieShopcartCookie = this.getCookie("shopcart");
     var foodieShopcart = [];
     if (foodieShopcartCookie != null && foodieShopcartCookie != "" && foodieShopcartCookie != undefined) {
         var foodieShopcartStr = decodeURIComponent(foodieShopcartCookie);
         foodieShopcart = JSON.parse(foodieShopcartStr);
 
-        // 如果不是对象，则重新复制为空数组
+        // 如果不是对象, 则重新复制为空数组
         if (typeof(foodieShopcart) != "object") {
             foodieShopcart = [];
         }
 
         var isHavingItem = false;
-        // 如果添加的商品已经存在与购物车中，则购物车中已经存在的商品数量累加新增的
+        // 如果添加的商品已经存在与购物车中, 则购物车中已经存在的商品数量累加新增的
         for(var i = 0 ; i < foodieShopcart.length ; i ++) {
             var tmpItem = foodieShopcart[i];
             var specId = tmpItem.specId;
@@ -5589,7 +5589,7 @@ import javax.servlet.http.HttpServletResponse;
 public class ShopcartController {
 
     /**
-     * 前端用户在登录的情况下，添加商品到购物车，会同时在后端同步购物车到redis缓存
+     * 前端用户在登录的情况下, 添加商品到购物车, 会同时在后端同步购物车到redis缓存
      */
     @ApiOperation(value = "addToShopcart", notes = "add to shop cart", httpMethod = "POST")
     @PostMapping("/add")
@@ -5602,7 +5602,7 @@ public class ShopcartController {
             return JsonResult.errorMsg("blank user id");
         }
 
-        // todo:前端用户在登录的情况下，添加商品到购物车，会同时在后端同步购物车到redis缓存
+        // todo:前端用户在登录的情况下, 添加商品到购物车, 会同时在后端同步购物车到redis缓存
 
 
         System.out.println(shopcartBO);
@@ -5667,7 +5667,7 @@ renderShopcart() {
         return;
     }
 
-    // 刷新购物车中价格，以防长时间未登录网址，价格发生变动
+    // 刷新购物车中价格, 以防长时间未登录网址, 价格发生变动
     // 拼接规格ids
     var itemSpecIds = "";
     for (var i = 0 ; i < shopcartList.length ; i ++) {
@@ -5691,7 +5691,7 @@ renderShopcart() {
             // 删除现有购物车cookie
             app.deleteCookie("shopcart");
             // console.log(newItemList);
-            // 拿到最新商品数据以后，重新组合成购物车数据
+            // 拿到最新商品数据以后, 重新组合成购物车数据
             for (var i = 0 ; i < newItemList.length ; i ++) {
                 var tmpNewItem = newItemList[i];
                 var tmpNewItemSpecId = tmpNewItem.specId;
@@ -5926,7 +5926,7 @@ delFromCart(specId) {
     }
     this.reCalItemsCountsAndAmount();
 
-    // 如果用户是已经登录状态，需要再把redis中的购物车商品删除
+    // 如果用户是已经登录状态, 需要再把redis中的购物车商品删除
     var userIsLogin = this.userIsLogin;
     if (userIsLogin) {
         var userInfo = this.userInfo;
@@ -5971,7 +5971,7 @@ public JsonResult del(
         return JsonResult.errorMsg("参数不能为空");
     }
 
-    // todo: 用户在页面删除购物车中的商品数据，如果此时用户已经登录，则需要同步删除后端购物车中的商品
+    // todo: 用户在页面删除购物车中的商品数据, 如果此时用户已经登录, 则需要同步删除后端购物车中的商品
 
     return JsonResult.ok();
 }
@@ -6014,7 +6014,7 @@ public JsonResult del(
 goPay() {
     var shopcartList = app.getShopcartList();
     if (shopcartList.length <= 0) {
-        alert("购物车中没有商品，无法结算");
+        alert("购物车中没有商品, 无法结算");
         return;
     }
 
@@ -6145,7 +6145,7 @@ renderOrderInfoList() {
     this.totalAmount = totalAmount;
 
     if (orderItemList.length <= 0) {
-        alert("没有商品信息，或订单已经提交");
+        alert("没有商品信息, 或订单已经提交");
         window.location.href = "shopcart.html";
     }
 },
@@ -6195,7 +6195,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 用户在确认订单页面，可以针对收货地址做如下操作：
+ * 用户在确认订单页面, 可以针对收货地址做如下操作：
  * 1. 查询用户的所有收货地址列表
  * 2. 新增收货地址
  * 3. 删除收货地址
@@ -6470,7 +6470,7 @@ import java.util.List;
 
 
 /**
- * 用户在确认订单页面，可以针对收货地址做如下操作：
+ * 用户在确认订单页面, 可以针对收货地址做如下操作：
  * 1. 查询用户的所有收货地址列表
  * 2. 新增收货地址
  * 3. 删除收货地址
@@ -6672,7 +6672,7 @@ saveNewAddressOrUpdate() {
 
     var addressId = this.updatedAddressId;
 
-    // 地址id为空，则新增地址，否则更新地址
+    // 地址id为空, 则新增地址, 否则更新地址
     if (addressId == "" || addressId == undefined || addressId == null) {
         axios.post(
             serverUrl + '/address/add', 
@@ -6793,7 +6793,7 @@ deleteAddress(addressId) {
         return;
     }
 
-    // 如果删除的地址是默认地址或者选中地址，则choosedAddressId和defaultAddressId要设置为空
+    // 如果删除的地址是默认地址或者选中地址, 则choosedAddressId和defaultAddressId要设置为空
     if (addressId == this.choosedAddressId) {
         this.choosedAddressId = "";
     }
@@ -6933,11 +6933,11 @@ create table orders
     receiver_address varchar(128) not null comment '收货地址快照',
     total_amount     int          not null comment '订单总价格',
     real_pay_amount  int          not null comment '实际支付总价格',
-    post_amount      int          not null comment '邮费;默认可以为零，代表包邮',
+    post_amount      int          not null comment '邮费;默认可以为零, 代表包邮',
     pay_method       int          not null comment '支付方式',
     left_msg         varchar(128) null comment '买家留言',
     extand           varchar(32)  null comment '扩展字段',
-    is_comment       int          not null comment '买家是否评价;1：已评价，0：未评价',
+    is_comment       int          not null comment '买家是否评价;1：已评价, 0：未评价',
     is_delete        int          not null comment '逻辑删除状态;1: 删除 0:未删除',
     created_time     datetime     not null comment '创建时间（成交时间）',
     updated_time     datetime     not null comment '更新时间'
@@ -6985,19 +6985,19 @@ create table order_status
     primary key,
     order_status int         not null comment '订单状态',
     created_time datetime    null comment '订单创建时间;对应[10:待付款]状态',
-    pay_time     datetime    null comment '支付成功时间;对应[20:已付款，待发货]状态',
-    deliver_time datetime    null comment '发货时间;对应[30：已发货，待收货]状态',
+    pay_time     datetime    null comment '支付成功时间;对应[20:已付款, 待发货]状态',
+    deliver_time datetime    null comment '发货时间;对应[30：已发货, 待收货]状态',
     success_time datetime    null comment '交易成功时间;对应[40：交易成功]状态',
     close_time   datetime    null comment '交易关闭时间;对应[50：交易关闭]状态',
     comment_time datetime    null comment '留言时间;用户在交易成功后的留言时间'
 )
     comment '订单状态表;订单的每个状态更改都需要进行记录
 10：待付款  
-20：已付款，待发货  
-30：已发货，待收货（7天自动确认）  
+20：已付款, 待发货  
+30：已发货, 待收货（7天自动确认）  
 40：交易成功（此时可以评价）
-50：交易关闭（待付款时，用户取消 或 长时间未付款，系统识别后自动关闭）
-ps: 退货/退货, 此分支流程不做，所以不加入' charset = utf8mb4;
+50：交易关闭（待付款时, 用户取消 或 长时间未付款, 系统识别后自动关闭）
+ps: 退货/退货, 此分支流程不做, 所以不加入' charset = utf8mb4;
 ```
 
 订单状态表和订单主表可以放在一起, 但是真实业务场景, 如果合并那么列会很多, 查询速度降低. 逻辑拆分.
@@ -7177,6 +7177,72 @@ ps: 退货/退货, 此分支流程不做，所以不加入' charset = utf8mb4;
 
 
 ### 异步通知与同步通知
+
+
+
+
+
+
+
+
+
+# 整合分布式锁
+
+目前在项目中, 基于数据库update行锁去扣减库存, 这种方案是不错的, 完全可以解决超卖的问题, 在一般情况下, 我们可以大胆使用. 如果大家担心在访问量激增的情况下, 对数据库压力较大, 我们可以使用基于Redis的分布式锁, 将压力从数据库层前移到Redis层。Redis在我们的项目中已经存在了, 我们不需过多的配置. 使用分布式锁呢, 我们采用Redisson这个客户端, 需要在pom文件中引入. 
+
+```xml
+<!-- 分布式锁【1】引入 redisson 依赖 -->
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson-spring-boot-starter</artifactId>
+    <version>3.12.0</version>
+</dependency>
+```
+
+在这里我们采用了Redisson的starter，结合SpringBoot项目, 可以快速的启动, 无需过多的配置. 第二步, 我们在`ItemServiceImpl`类中注入Redisson的客户端`RedissonClient`, 如下：
+
+```java
+//分布式锁【2】自动注入
+@Autowired
+private RedissonClient redisson;
+```
+
+最后, 我们在扣减库存时, 先获取分布式锁, 只有获得锁的请求才能扣减库存, 没有获得锁的请求, 将等待. **这里我们需要注意的是获取锁时传入的key，这里我们采用的是商品的规格ID，在并发时, 规则ID相同时, 才会产生等待. **代码如下：
+
+```java
+		/**
+         *  分布式锁【3】 编写业务代码
+         *  1、Redisson是基于Redis，使用Redisson之前, 项目必须使用Redis
+         *   2、注意getLock方法中的参数, 以specId作为参数, 每个specId一个key，和
+         *   数据库中的行锁是一致的, 不会是方法级别的锁
+         */
+        RLock rLock = redisson.getLock("SPECID_"+specId);
+        try {
+            /**
+             * 1、获取分布式锁, 锁的超时时间是5秒get
+             *  2、获取到了锁, 进行后续的业务操作
+             */
+            rLock.lock(5, TimeUnit.HOURS);
+
+            int result = itemsMapperCustom.decreaseItemSpecStock(specId, buyCounts);
+            if (result != 1) {
+                throw new RuntimeException("订单创建失败, 原因：库存不足!");
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage(),e);
+            throw new RuntimeException(e.getMessage(),e);
+        }finally {
+            /**
+             *  不管业务是否操作正确, 随后都要释放掉分布式锁
+             *   如果不释放, 过了超时时间也会自动释放
+             */
+            rLock.unlock();
+        }
+```
+
+到这里, 整合分布式锁就完成了
+
+
 
 
 
