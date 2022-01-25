@@ -18,8 +18,6 @@ public interface ItemsMapperCustom {
 
     public List<ShopcartVO> queryItemsByJointSpecIds(@Param("paramsList") List specIds);
 
-    /*public List<ShopcartVO> queryItemsBySpecIds(@Param("paramsList") List specIdsList);
-
     public int decreaseItemSpecStock(@Param("specId") String specId,
-                                     @Param("pendingCounts") int pendingCounts);*/
+                                     @Param("pendingCounts") int pendingCounts);
 }

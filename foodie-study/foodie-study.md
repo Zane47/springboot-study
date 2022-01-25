@@ -7014,45 +7014,690 @@ ps: 退货/退货, 此分支流程不做, 所以不加入' charset = utf8mb4;
 
 ### 提交并且接受订单信息
 
-提交订单
+提交订单前台代码
 
+```javascript
+submitOrder() {
+    // 判断提交的商品不能为空
+    var orderItemList = this.orderItemList;
+    if (orderItemList == null || orderItemList == undefined || orderItemList == '' || orderItemList.length <= 0) {
+        alert("没有商品信息，订单无法提交~！");
+        return;
+    }
+    // 拼接规格ids
+    var itemSpecIds = "";
+    for (var i = 0 ; i < orderItemList.length ; i ++) {
+        var tmpSpecId = orderItemList[i].specId;
+        itemSpecIds += tmpSpecId;
+        if (i < orderItemList.length-1) {
+            itemSpecIds += ",";
+        }
+    }
 
+    // 判断选中的地址id不能为空
+    var choosedAddressId = this.choosedAddressId;
+    if (choosedAddressId == null || choosedAddressId == undefined || choosedAddressId == '') {
+        alert("请选择收货地址！");
+        return;
+    }
 
+    // 判断支付方式不能为空
+    var choosedPayMethod = parseInt(this.choosedPayMethod);
+    if (choosedPayMethod != 1 && choosedPayMethod != 2) {
+        alert("请选择支付方式！");
+        return;
+    }
 
+    // var newWindow = window.open();
 
+    // 买家备注可以为空
+    var orderRemarker = this.orderRemarker;
+    // console.log(orderRemarker);
 
+    var userInfo = this.userInfo;
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.post(
+        serverUrl + '/orders/create', 
+        {
+            "userId": userInfo.id,
+            "itemSpecIds": itemSpecIds,
+            "addressId": choosedAddressId,
+            "payMethod": choosedPayMethod,
+            "leftMsg": orderRemarker,
+        },
+        {
+            headers: {
+                'headerUserId': userInfo.id,
+                'headerUserToken': userInfo.userUniqueToken
+            }
+        })
+        .then(res => {
+        if (res.data.status == 200) {
+            // alert("OK");
+            var orderId = res.data.data;
+            // 判断是否微信还是支付宝支付
+            if (choosedPayMethod == 1) {
+                // 微信支付则跳转到微信支付页面，并且获得支付二维码
+                window.location.href = "wxpay.html?orderId=" + orderId;
+            } else if (choosedPayMethod == 2) {
+                this.orderId = orderId;
+
+                // 支付宝支付直接跳转
+                window.location.href = "alipay.html?orderId=" + orderId + "&amount="+this.totalAmount;
+                window.open("alipayTempTransit.html?orderId=" + orderId);
+                // const newWindow = window.open();
+                // 弹出的新窗口进行支付
+                // newWindow.location = "alipayTempTransit.html?orderId=" + orderId;
+                // this.$nextTick(()=> {
+                // 	// 当前页面跳转后会轮训支付结果
+                // 	newWindow.location.href = "alipay.html?orderId=" + orderId;
+                // })
+            } else {
+                alert("目前只支持微信或支付宝支付！");
+            }
+
+        } else {
+            alert(res.data.msg);
+        }
+    });
+},
+```
+
+在后台中需要规划处理业务的逻辑:
+
+Controller中
+
+```
+1. 创建订单
+2. 创建订单以后，移除购物车中已结算(已提交)的商品
+3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+```
 
 
 
 ## 创建订单
 
-### 填充新订单数据
+### 创建订单的流程
+
+1. 填充新订单数据
+
+2. 保存订单与子订单数据
+
+3. 扣除商品库存与订单状态保存
+
+---
+
+1. OrdersController
+
+```java
+package com.imooc.controller;
+
+@RequestMapping("orders")
+@RestController
+public class OrdersController extends BaseController {
+
+    private static Logger logger = LoggerFactory.getLogger(OrdersController.class);
+
+
+    @Autowired
+    private OrderService orderService;
 
 
 
+    /**
+     * 创建订单
+     * <p>
+     * 1. 创建订单
+     * 2. 创建订单以后，移除购物车中已结算(已提交)的商品
+     * 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+     */
+    @ApiOperation(value = "user submit order", notes = "用户下单", httpMethod = "POST")
+    @PostMapping("/create")
+    public JsonResult createOrder(
+            @ApiParam
+            @RequestBody SubmitOrderBO submitOrderBO) {
+        logger.info(submitOrderBO.toString());
+
+        // ------------------------ check ------------------------
+        if (!submitOrderBO.getPayMethod().equals(PayMethod.WECHATPAY.type) &&
+                !submitOrderBO.getPayMethod().equals(PayMethod.ALIPAY.type)) {
+            return JsonResult.errorMsg("wrong pay method");
+        }
+
+        // 1. 创建订单
+        // 2. 创建订单以后，移除购物车中已结算(已提交)的商品
+        // 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+
+        // ------------------------ 1. 创建订单 ------------------------
+        OrderVO orderVO = orderService.createOrder(submitOrderBO);
+        String orderId = orderVO.getOrderId();
+
+        // ------------------------ 2. 创建订单以后，移除购物车中已结算(已提交)的商品 ------------------------
+        return JsonResult.ok(orderId);
+    }
+}
+
+```
+
+需要在orderService层中创建订单
+
+2. service层
+
+接口
+
+```java
+package com.imooc.service;
+
+import com.imooc.pojo.bo.SubmitOrderBO;
+import com.imooc.pojo.vo.OrderVO;
+
+public interface OrderService {
+
+    /**
+     * 用于创建订单相关信息
+     */
+    public OrderVO createOrder(SubmitOrderBO submitOrderBO);
+}
+```
+
+其中的OrderVO
+
+```java
+package com.imooc.pojo.vo;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+@Getter
+@Setter
+@ToString
+public class OrderVO {
+    private String orderId;
+    private MerchantOrdersVO merchantOrdersVO;
+}
+```
+
+impl
+
+```java
+package com.imooc.service.impl;
+
+@Service
+public class OrderServiceImpl implements OrderService {
+
+    @Autowired
+    private OrdersMapper ordersMapper;
+
+    @Autowired
+    private AddressService addressService;
+
+    @Autowired
+    private ItemService itemService;
+
+    @Autowired
+    private OrderItemsMapper orderItemsMapper;
+
+    @Autowired
+    private OrderStatusMapper orderStatusMapper;
+
+    @Autowired
+    private Sid sid;
 
 
+    /**
+     * 用于创建订单相关信息
+     * <p>
+     * 1. 新订单数据保存
+     * 2. 循环根据itemSpecIds保存订单商品信息表
+     * 2.1 根据规格id，查询规格的具体信息，主要获取价格
+     * 2.2 根据商品id，获得商品信息以及商品图片
+     * 2.3 循环保存子订单数据到数据库
+     * 2.4 在用户提交订单以后，规格表中需要扣除库存
+     * 3. 保存订单状态表
+     * 4. 构建商户订单，用于传给支付中心
+     * 5. 构建自定义订单vo
+     */
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public OrderVO createOrder(SubmitOrderBO submitOrderBO) {
+        // ------------------------  1. 新订单数据保存 ------------------------
+        Orders newOrder = new Orders();
+
+        String orderId = sid.nextShort();
+
+        newOrder.setId(orderId);
+        Optional.ofNullable(submitOrderBO.getUserId()).ifPresent(newOrder::setUserId);
+
+        // address信息
+        final UserAddress userAddress =
+                addressService.querySpecificAddress(submitOrderBO.getUserId(), submitOrderBO.getAddressId());
+        Optional.ofNullable(userAddress.getReceiver()).ifPresent(newOrder::setReceiverName);
+        Optional.ofNullable(userAddress.getMobile()).ifPresent(newOrder::setReceiverMobile);
+        final String receiverAddress = userAddress.getProvince() + " " +
+                userAddress.getCity() + " " +
+                userAddress.getDistrict() + " " +
+                userAddress.getDetail();
+        newOrder.setReceiverAddress(receiverAddress);
+
+        // 包邮, 设置邮费为0
+        Integer postAmount = 0;
+
+        newOrder.setPostAmount(postAmount);
+
+        // newOrder.setTotalAmount(0);
+        // newOrder.setRealPayAmount(0);
+        newOrder.setPayMethod(submitOrderBO.getPayMethod());
+
+        Optional.ofNullable(submitOrderBO.getLeftMsg()).ifPresent(newOrder::setLeftMsg);
+
+        // newOrder.setExtand("");
+        newOrder.setIsComment(YesOrNo.NO.type);
+        newOrder.setIsDelete(YesOrNo.NO.type);
+        newOrder.setCreatedTime(new Date());
+        newOrder.setUpdatedTime(new Date());
 
 
+        // ------------------------ 2. 循环根据itemSpecIds保存订单商品信息表 ------------------------
+
+        String itemSpecIds = submitOrderBO.getItemSpecIds();
+        String[] itemSpecArray = itemSpecIds.split(",");
+
+        // 商品原价累计
+        Integer totalAmount = 0;
+        // 优惠后的实际支付价格累计
+        Integer actualPayAmout = 0;
+        for (String itemSpecId : itemSpecArray) {
+            // todo: 整合redis后，商品购买的数量重新从redis的购物车中获取
+            int buyCounts = 1;
+
+            //   2.1 根据规格id，查询规格的具体信息，主要获取价格
+            ItemsSpec itemsSpec = itemService.queryItemSpecBySpecId(itemSpecId);
+            totalAmount += itemsSpec.getPriceNormal() * buyCounts;
+            actualPayAmout += itemsSpec.getPriceDiscount() * buyCounts;
+
+            //   2.2 根据商品id，获得商品信息以及商品图片
+            Items item = itemService.queryItemById(itemsSpec.getItemId());
+            String imageUrl = itemService.queryItemMainImgByItemId(item.getId());
+
+            //   2.3 循环保存子订单数据到数据库
+            OrderItems orderItem = new OrderItems();
+            orderItem.setId(sid.nextShort());
+            orderItem.setOrderId(orderId);
+            orderItem.setItemId(item.getId());
+            orderItem.setItemImg(imageUrl);
+            orderItem.setItemName(item.getItemName());
+            orderItem.setItemSpecId(itemSpecId);
+            orderItem.setItemSpecName(itemsSpec.getName());
+            orderItem.setPrice(itemsSpec.getPriceDiscount());
+            orderItem.setBuyCounts(buyCounts);
+
+            orderItemsMapper.insert(orderItem);
+
+            //   2.4 在用户提交订单以后，规格表中需要扣除库存
+            itemService.decreaseItemSpecStock(itemSpecId, buyCounts);
+        }
+
+        newOrder.setTotalAmount(totalAmount);
+        newOrder.setRealPayAmount(actualPayAmout);
+        ordersMapper.insert(newOrder);
+
+        // 3. 保存订单状态表
+        OrderStatus orderStatus = new OrderStatus();
+        orderStatus.setOrderId(orderId);
+        orderStatus.setOrderStatus(OrderStatusEnum.WAIT_PAY.type);
+        orderStatus.setCreatedTime(new Date());
+        orderStatusMapper.insert(orderStatus);
+
+        // 4. 构建商户订单，用于传给支付中心
+        MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
+        merchantOrdersVO.setMerchantOrderId(orderId);
+        merchantOrdersVO.setMerchantUserId(submitOrderBO.getUserId());
+        merchantOrdersVO.setAmount(actualPayAmout + postAmount);
+        merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());
 
 
-### 保存订单与子订单数据
+        // 5. 构建自定义订单vo
+        OrderVO orderVO = new OrderVO();
+        orderVO.setOrderId(orderId);
+        orderVO.setMerchantOrdersVO(merchantOrdersVO);
+
+        return orderVO;
+    }
+}
+```
+
+```java
+public class MerchantOrdersVO {
+    // 商户订单号
+    private String merchantOrderId;
+
+    // 商户方的发起用户的用户主键id
+    private String merchantUserId;
+
+    // 实际支付总金额（包含商户所支付的订单费邮费总额）
+    private Integer amount;
+
+    // 支付方式 1:微信   2:支付宝
+    private Integer payMethod;
+
+    // 支付成功后的回调地址（学生自定义）
+    private String returnUrl;
+}
+```
+
+```java
+package com.imooc.enums;
+
+/**
+ * 订单状态
+ */
+public enum OrderStatusEnum {
+    WAIT_PAY(10, "待付款"),
+    WAIT_DELIVER(20, "已付款，待发货"),
+    WAIT_RECEIVE(30, "已发货，待收货"),
+    SUCCESS(40, "交易成功"),
+    CLOSE(50, "交易关闭");
+
+    public Integer type;
+    public String value;
+
+    OrderStatusEnum(Integer type, String value) {
+        this.type = type;
+        this.value = value;
+    }
+}
+```
+
+其中需要调用其他的方法.
+
+* querySpecificAddress, address服务中根据用户id和地址id查询到具体的地址信息保存到order中
+
+接口
+
+```java
+public interface AddressService {
+    /**
+     * query specific address info by userId and addressId
+     */
+    public UserAddress querySpecificAddress(String userId, String addressId);
+}
+```
+
+impl
+
+```java
+/**
+     *  query specific address info by userId and addressId
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public UserAddress querySpecificAddress(String userId, String addressId) {
+    UserAddress userAddress = new UserAddress();
+    userAddress.setUserId(userId);
+    userAddress.setId(addressId);
+    return userAddressMapper.selectOne(userAddress);
+}
+```
+
+* 在循环根据itemSpecIds保存订单商品信息表的时候, 需要获得商品的规格信息
+
+```
+2.1 根据规格id，查询规格的具体信息，主要获取价格
+2.2 根据商品id，获得商品信息以及商品图片
+2.3 循环保存子订单数据到数据库
+2.4 在用户提交订单以后，规格表中需要扣除库存
+```
+
+接口
+
+```java
+/**
+ * 商品信息相关接口
+ */
+public interface ItemService {
+    // ------------------------ orders中使用 ------------------------
+    /**
+     * 根据商品规格id, specId查询商品的信息
+     */
+    public ItemsSpec queryItemSpecBySpecId(String specId);
+
+    /**
+     * 根据商品id(item_id), 查询商品主图
+     */
+    public String queryItemMainImgByItemId(String itemId);
 
 
+    /**
+     * 减少库存
+     */
+    public void decreaseItemSpecStock(String specId, int buyCounts);
+}
+```
+
+impl
+
+```java
+/**
+     * 根据商品规格id, specId查询商品的信息
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public ItemsSpec queryItemSpecBySpecId(String specId) {
+    return itemsSpecMapper.selectByPrimaryKey(specId);
+}
+
+/**
+     * 根据商品id(item_id), 查询商品主图
+     */
+@Transactional(propagation = Propagation.SUPPORTS)
+@Override
+public String queryItemMainImgByItemId(String itemId) {
+    ItemsImg itemsImg = new ItemsImg();
+    itemsImg.setItemId(itemId);
+    itemsImg.setIsMain(YesOrNo.YES.type);
+
+    ItemsImg result = itemsImgMapper.selectOne(itemsImg);
+
+    return result != null ? result.getUrl() : "";
+}
+
+/**
+     * 减少库存
+     * 务必使用事务, 出错了需要回滚
+     */
+@Transactional(propagation = Propagation.REQUIRED)
+@Override
+public void decreaseItemSpecStock(String specId, int buyCounts) {
+    // todo: 这里应该是分布式的形式
+
+    // synchronized 不推荐使用，集群下无用，性能低下
+    // 锁数据库(行锁): 不推荐，导致数据库性能低下
+    // 分布式锁 zookeeper redis
+
+    // lockUtil.getLock(); -- 加锁
+
+    // 1. 查询库存
+    //        int stock = 10;
+
+    // 2. 判断库存，是否能够减少到0以下
+    //        if (stock - buyCounts < 0) {
+    // 提示用户库存不够
+    //            10 - 3 -3 - 5 = -1
+    //        }
+
+    // lockUtil.unLock(); -- 解锁
 
 
+    int result = itemsMapperCustom.decreaseItemSpecStock(specId, buyCounts);
+    if (result != 1) {
+        throw new RuntimeException("订单创建失败，原因：库存不足!");
+    }
+
+}
+```
+
+其中的扣减库存的操作, 这里先用简单的mapper的方式来作差 -> 超卖问题是电商中的经典问题, 在分布式中讲解
+
+接口
+
+```java
+public interface ItemsMapperCustom {
+    public int decreaseItemSpecStock(@Param("specId") String specId,
+                                     @Param("pendingCounts") int pendingCounts);
+}
+```
+
+```xml
+<!-- 扣减库存 -->
+<update id="decreaseItemSpecStock">
+    update items_spec
+    set stock = stock - #{pendingCounts}
+    where id = #{specId}
+    and stock >= #{pendingCounts}
+</update>
+```
+
+---
+
+接着回到Controller层中继续编写
+
+```
+* 2. 创建订单以后，移除购物车中已结算(已提交)的商品
+* 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+```
+
+其中的2暂时不写, redis引入后编写
+
+```java
+@RequestMapping("orders")
+@RestController
+public class OrdersController extends BaseController {
+
+    private static Logger logger = LoggerFactory.getLogger(OrdersController.class);
 
 
+    @Autowired
+    private OrderService orderService;
 
-### 扣除商品库存与订单状态保存
+    // 这里需要手动注入Bean -> config中
+    @Autowired
+    private RestTemplate restTemplate;
 
 
+    /**
+     * 创建订单
+     * <p>
+     * 1. 创建订单
+     * 2. 创建订单以后，移除购物车中已结算(已提交)的商品
+     * 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+     */
+    @ApiOperation(value = "user submit order", notes = "用户下单", httpMethod = "POST")
+    @PostMapping("/create")
+    public JsonResult createOrder(
+            @ApiParam
+            @RequestBody SubmitOrderBO submitOrderBO) {
+        logger.info(submitOrderBO.toString());
+
+        // ------------------------ check ------------------------
+        if (!submitOrderBO.getPayMethod().equals(PayMethod.WECHATPAY.type) &&
+                !submitOrderBO.getPayMethod().equals(PayMethod.ALIPAY.type)) {
+            return JsonResult.errorMsg("wrong pay method");
+        }
+
+        // 1. 创建订单
+        // 2. 创建订单以后，移除购物车中已结算(已提交)的商品
+        // 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+
+        // ------------------------ 1. 创建订单 ------------------------
+        OrderVO orderVO = orderService.createOrder(submitOrderBO);
+        String orderId = orderVO.getOrderId();
+
+        // ------------------------ 2. 创建订单以后，移除购物车中已结算(已提交)的商品 ------------------------
+        /**
+         * 1001
+         * 2002 -> 用户购买
+         * 3003 -> 用户购买
+         * 4004
+         */
+        // todo: 整合redis之后，完善购物车中的已结算商品清除，并且同步到前端的cookie
+//        CookieUtils.setCookie(request, response, FOODIE_SHOPCART, "", true);
 
 
+        // ------------------------ 3. 向支付中心发送当前订单，用于保存支付中心的订单数据 ------------------------
+
+        MerchantOrdersVO merchantOrdersVO = orderVO.getMerchantOrdersVO();
+
+        merchantOrdersVO.setReturnUrl(payReturnUrl);
+
+        // 为了方便测试购买，所以所有的支付金额都统一改为1分钱
+        merchantOrdersVO.setAmount(1);
 
 
+        // 支付中心
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add("imoocUserId", "imooc");
+        headers.add("password", "imooc");
+
+        HttpEntity<MerchantOrdersVO> entity = new HttpEntity<>(merchantOrdersVO, headers);
+        ResponseEntity<JsonResult> responseEntity =
+                restTemplate.postForEntity(paymentUrl, entity, JsonResult.class);
+        JsonResult body = responseEntity.getBody();
+        if (body.getStatus() != 200) {
+            logger.error("发送错误：{}", body.getMsg());
+            return JsonResult.errorMsg("支付中心订单创建失败，请联系管理员！");
+        }
+
+
+        return JsonResult.ok(orderId);
+    }
+}
+```
+
+restTemplate需要额外引入bean
+
+```java
+package com.imooc.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+    // todo: 要修改
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+```
 
 ### 测试订单创建与回滚
+
+将购买商品的库存改为0, 进行下单, 查看到日志中报错, 并且页面不跳转, orders表和orderitems表都没有响应记录, 说明回滚成功.
+
+```
+Releasing transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5ac2a6e4]
+java.lang.RuntimeException: 订单创建失败，原因：库存不足!
+```
+
+务必要在上面加上扣减库存的方法上加上@Transactional(propagation = Propagation.REQUIRED)注解.
+
+-> 注意在分布式或者多线程情况下, 手动控制事务的提交
+
+-> 分布式锁节相关内容
+
+
+
+---
+
+出现的问题:
+
+@Transactional注解不起作用, 就是当库存设置为0的时候, 抛出错误, 但是事务并没有回滚, 数据仍然插入了orders和ordersItem表
+
+
 
 
 
@@ -7064,9 +7709,125 @@ ps: 退货/退货, 此分支流程不做, 所以不加入' charset = utf8mb4;
 
 ### 创建订单后前端的业务处理讲解
 
+```javascript
+.then(res => {
+    if (res.data.status == 200) {
+        // alert("OK");
+        var orderId = res.data.data;
+        // 判断是否微信还是支付宝支付
+        if (choosedPayMethod == 1) {
+            // 微信支付则跳转到微信支付页面，并且获得支付二维码
+            window.location.href = "wxpay.html?orderId=" + orderId;
+        } else if (choosedPayMethod == 2) {
+            this.orderId = orderId;
+
+            // 支付宝支付直接跳转
+            window.location.href = "alipay.html?orderId=" + orderId + "&amount="+this.totalAmount;
+            window.open("alipayTempTransit.html?orderId=" + orderId);
+            // const newWindow = window.open();
+            // 弹出的新窗口进行支付
+            // newWindow.location = "alipayTempTransit.html?orderId=" + orderId;
+            // this.$nextTick(()=> {
+            // 	// 当前页面跳转后会轮训支付结果
+            // 	newWindow.location.href = "alipay.html?orderId=" + orderId;
+            // })
+        } else {
+            alert("目前只支持微信或支付宝支付！");
+        }
+
+    } else {
+        alert(res.data.msg);
+    }
+});
+```
+
+以wechatpay为例子, wxpay.html
+
+```javascript
+created() {
+    // var me = this;
+    // 通过cookie判断用户是否登录
+    this.judgeUserLoginStatus();
+
+    // 获得订单号
+    var orderId = app.getUrlParam("orderId");
+    // 如果orderId为空，跳转到错误页面
+    if (orderId == null || orderId == undefined || orderId == '') {
+        app.goErrorPage();
+        return;
+    }
+
+    this.orderId = orderId;
+    this.getWXPayQRCodeUrl(orderId);
+
+    // 每隔3秒调用后台方法，查看订单是否已经支付成功
+    this.setTimer();
+},
+```
 
 
 
+
+
+
+
+
+
+# 扣减库存整合分布式锁
+
+目前在项目中, 基于数据库update行锁去扣减库存, 这种方案是不错的, 完全可以解决超卖的问题, 在一般情况下, 我们可以大胆使用. 如果大家担心在访问量激增的情况下, 对数据库压力较大, 我们可以使用基于Redis的分布式锁, 将压力从数据库层前移到Redis层。Redis在我们的项目中已经存在了, 我们不需过多的配置. 使用分布式锁呢, 我们采用Redisson这个客户端, 需要在pom文件中引入. 
+
+```xml
+<!-- 分布式锁【1】引入 redisson 依赖 -->
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson-spring-boot-starter</artifactId>
+    <version>3.12.0</version>
+</dependency>
+```
+
+在这里我们采用了Redisson的starter，结合SpringBoot项目, 可以快速的启动, 无需过多的配置. 第二步, 我们在`ItemServiceImpl`类中注入Redisson的客户端`RedissonClient`, 如下：
+
+```java
+//分布式锁【2】自动注入
+@Autowired
+private RedissonClient redisson;
+```
+
+最后, 我们在扣减库存时, 先获取分布式锁, 只有获得锁的请求才能扣减库存, 没有获得锁的请求, 将等待. **这里我们需要注意的是获取锁时传入的key，这里我们采用的是商品的规格ID，在并发时, 规则ID相同时, 才会产生等待. **代码如下：
+
+```java
+		/**
+         *  分布式锁【3】 编写业务代码
+         *  1、Redisson是基于Redis，使用Redisson之前, 项目必须使用Redis
+         *   2、注意getLock方法中的参数, 以specId作为参数, 每个specId一个key，和
+         *   数据库中的行锁是一致的, 不会是方法级别的锁
+         */
+        RLock rLock = redisson.getLock("SPECID_"+specId);
+        try {
+            /**
+             * 1、获取分布式锁, 锁的超时时间是5秒get
+             *  2、获取到了锁, 进行后续的业务操作
+             */
+            rLock.lock(5, TimeUnit.HOURS);
+
+            int result = itemsMapperCustom.decreaseItemSpecStock(specId, buyCounts);
+            if (result != 1) {
+                throw new RuntimeException("订单创建失败, 原因：库存不足!");
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage(),e);
+            throw new RuntimeException(e.getMessage(),e);
+        }finally {
+            /**
+             *  不管业务是否操作正确, 随后都要释放掉分布式锁
+             *   如果不释放, 过了超时时间也会自动释放
+             */
+            rLock.unlock();
+        }
+```
+
+到这里, 整合分布式锁就完成了
 
 
 
@@ -7177,74 +7938,6 @@ ps: 退货/退货, 此分支流程不做, 所以不加入' charset = utf8mb4;
 
 
 ### 异步通知与同步通知
-
-
-
-
-
-
-
-
-
-# 整合分布式锁
-
-目前在项目中, 基于数据库update行锁去扣减库存, 这种方案是不错的, 完全可以解决超卖的问题, 在一般情况下, 我们可以大胆使用. 如果大家担心在访问量激增的情况下, 对数据库压力较大, 我们可以使用基于Redis的分布式锁, 将压力从数据库层前移到Redis层。Redis在我们的项目中已经存在了, 我们不需过多的配置. 使用分布式锁呢, 我们采用Redisson这个客户端, 需要在pom文件中引入. 
-
-```xml
-<!-- 分布式锁【1】引入 redisson 依赖 -->
-<dependency>
-    <groupId>org.redisson</groupId>
-    <artifactId>redisson-spring-boot-starter</artifactId>
-    <version>3.12.0</version>
-</dependency>
-```
-
-在这里我们采用了Redisson的starter，结合SpringBoot项目, 可以快速的启动, 无需过多的配置. 第二步, 我们在`ItemServiceImpl`类中注入Redisson的客户端`RedissonClient`, 如下：
-
-```java
-//分布式锁【2】自动注入
-@Autowired
-private RedissonClient redisson;
-```
-
-最后, 我们在扣减库存时, 先获取分布式锁, 只有获得锁的请求才能扣减库存, 没有获得锁的请求, 将等待. **这里我们需要注意的是获取锁时传入的key，这里我们采用的是商品的规格ID，在并发时, 规则ID相同时, 才会产生等待. **代码如下：
-
-```java
-		/**
-         *  分布式锁【3】 编写业务代码
-         *  1、Redisson是基于Redis，使用Redisson之前, 项目必须使用Redis
-         *   2、注意getLock方法中的参数, 以specId作为参数, 每个specId一个key，和
-         *   数据库中的行锁是一致的, 不会是方法级别的锁
-         */
-        RLock rLock = redisson.getLock("SPECID_"+specId);
-        try {
-            /**
-             * 1、获取分布式锁, 锁的超时时间是5秒get
-             *  2、获取到了锁, 进行后续的业务操作
-             */
-            rLock.lock(5, TimeUnit.HOURS);
-
-            int result = itemsMapperCustom.decreaseItemSpecStock(specId, buyCounts);
-            if (result != 1) {
-                throw new RuntimeException("订单创建失败, 原因：库存不足!");
-            }
-        } catch (Exception e) {
-            logger.error(e.getMessage(),e);
-            throw new RuntimeException(e.getMessage(),e);
-        }finally {
-            /**
-             *  不管业务是否操作正确, 随后都要释放掉分布式锁
-             *   如果不释放, 过了超时时间也会自动释放
-             */
-            rLock.unlock();
-        }
-```
-
-到这里, 整合分布式锁就完成了
-
-
-
-
 
 
 

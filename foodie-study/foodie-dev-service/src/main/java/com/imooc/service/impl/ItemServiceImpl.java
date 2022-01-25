@@ -3,6 +3,7 @@ package com.imooc.service.impl;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.imooc.enums.CommentLevel;
+import com.imooc.enums.YesOrNo;
 import com.imooc.mapper.*;
 import com.imooc.pojo.*;
 import com.imooc.pojo.vo.CommentLevelCountsVO;
@@ -208,6 +209,68 @@ public class ItemServiceImpl implements ItemService {
     }
 
 
+    /**
+     * 根据商品规格id, specId查询商品的信息
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public ItemsSpec queryItemSpecBySpecId(String specId) {
+        return itemsSpecMapper.selectByPrimaryKey(specId);
+    }
+
+    /**
+     * 根据商品id(item_id), 查询商品主图
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public String queryItemMainImgByItemId(String itemId) {
+        ItemsImg itemsImg = new ItemsImg();
+        itemsImg.setItemId(itemId);
+        itemsImg.setIsMain(YesOrNo.YES.type);
+
+        ItemsImg result = itemsImgMapper.selectOne(itemsImg);
+
+        return result != null ? result.getUrl() : "";
+    }
+
+    /**
+     * 减少库存
+     * 务必使用事务, 出错了需要回滚
+     */
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void decreaseItemSpecStock(String specId, int buyCounts) {
+        // todo: 这里应该是分布式的形式
+
+        // synchronized 不推荐使用，集群下无用，性能低下
+        // 锁数据库(行锁): 不推荐，导致数据库性能低下
+        // 分布式锁 zookeeper redis
+
+        // lockUtil.getLock(); -- 加锁
+
+        // 1. 查询库存
+//        int stock = 10;
+
+        // 2. 判断库存，是否能够减少到0以下
+//        if (stock - buyCounts < 0) {
+        // 提示用户库存不够
+//            10 - 3 -3 - 5 = -1
+//        }
+
+        // lockUtil.unLock(); -- 解锁
+
+
+        int result = itemsMapperCustom.decreaseItemSpecStock(specId, buyCounts);
+        if (result != 1) {
+            throw new RuntimeException("订单创建失败，原因：库存不足!");
+        }
+
+    }
+
+
+    /**
+     * 分页查询设置
+     */
     private PagedGridResult setterPagedGrid(List<?> list, Integer page) {
         PageInfo<?> pageList = new PageInfo<>(list);
         PagedGridResult grid = new PagedGridResult();
@@ -217,9 +280,6 @@ public class ItemServiceImpl implements ItemService {
         grid.setRecords(pageList.getTotal());
         return grid;
     }
-
-
-
 
 
     /**
