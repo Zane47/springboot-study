@@ -36,8 +36,8 @@ public class OrdersController extends BaseController {
     private OrderService orderService;
 
     // 这里需要手动注入Bean -> config中
-    @Autowired
-    private RestTemplate restTemplate;
+    /*@Autowired
+    private RestTemplate restTemplate;*/
 
 
     /**

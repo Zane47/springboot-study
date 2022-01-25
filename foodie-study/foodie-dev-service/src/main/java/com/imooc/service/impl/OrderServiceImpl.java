@@ -148,17 +148,17 @@ public class OrderServiceImpl implements OrderService {
         orderStatusMapper.insert(waitPayOrderStatus);
 
         // 4. 构建商户订单，用于传给支付中心
-        MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
+        /*MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
         merchantOrdersVO.setMerchantOrderId(orderId);
         merchantOrdersVO.setMerchantUserId(submitOrderBO.getUserId());
         merchantOrdersVO.setAmount(actualPayAmout + postAmount);
-        merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());
+        merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());*/
 
 
         // 5. 构建自定义订单vo
         OrderVO orderVO = new OrderVO();
         orderVO.setOrderId(orderId);
-        orderVO.setMerchantOrdersVO(merchantOrdersVO);
+        // orderVO.setMerchantOrdersVO(merchantOrdersVO);
 
         return orderVO;
     }
