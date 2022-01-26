@@ -8424,6 +8424,18 @@ private RedissonClient redisson;
 
 
 
+# 未解决的问题
+
+## transactional的问题
+
+在数据层 -> 事务的传播中, ref中的foodie-dev项目正常, 但是在本项目中事务始终不会因为错误而回滚
+
+
+
+在订单的超卖问题中, 一样的问题, 如果产生了超卖的现象, 应该是会抛出异常, 不会产生orders和ordersitem的数据, 但是本项目中仍然产生了. 
+
+
+
 
 
 

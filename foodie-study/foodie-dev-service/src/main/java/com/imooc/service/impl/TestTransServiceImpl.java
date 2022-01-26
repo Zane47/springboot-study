@@ -39,9 +39,9 @@ public class TestTransServiceImpl implements TestTransService {
     // @Transactional(propagation = Propagation.REQUIRED)
     @Override
     public void testPropagationTrans() {
-        int a = 1 / 0;
+
         stuService.saveParent();
-        // stuService.saveChildren();
+        stuService.saveChildren();
 
         /*try {
             // save point
