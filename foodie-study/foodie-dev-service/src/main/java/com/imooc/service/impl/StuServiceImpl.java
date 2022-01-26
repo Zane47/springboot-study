@@ -14,7 +14,7 @@ import javax.swing.*;
 public class StuServiceImpl implements StuService {
 
     @Autowired
-    private StuMapper stuMapper;
+    public StuMapper stuMapper;
 
 
     @Transactional(propagation = Propagation.SUPPORTS)
@@ -50,13 +50,45 @@ public class StuServiceImpl implements StuService {
         stuMapper.deleteByPrimaryKey(id);
     }
 
+
+
+
+    // @Transactional(propagation = Propagation.REQUIRED)
     @Override
     public void saveParent() {
+        Stu stu = new Stu();
+        stu.setName("parent");
+        stu.setAge(29);
+        stuMapper.insert(stu);
 
     }
+
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRED)
     public void saveChildren() {
+        saveChild1();
+        int a = 1 / 0;
+        saveChild2();
+    }
+
+    public void saveChild1() {
+        Stu stu1 = new Stu();
+        stu1.setName("child-1");
+        stu1.setAge(11);
+        stuMapper.insert(stu1);
 
     }
+
+    public void saveChild2() {
+        Stu stu2 = new Stu();
+        stu2.setName("child-2");
+        stu2.setAge(12);
+        stuMapper.insert(stu2);
+
+    }
+
+
+
+
 }

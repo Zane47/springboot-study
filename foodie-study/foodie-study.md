@@ -1106,7 +1106,320 @@ saveorder
 
 ## 事务的传播propagation
 
-2-24 -> 2-26
+* 事务传播行为是指多个拥有事务的方法在嵌套调用时的事务控制方式
+* XML:  <tx:method name="..." propagation="REQUIRED"/>
+* 注解: @Transactional(propagation=Propagation.REQUIRED)
+
+
+
+事务传播行为七种类型: PROPAGATION
+
+| 事务传播类型          | 说明                                                         |
+| --------------------- | ------------------------------------------------------------ |
+| REQUIRED <br />(默认) | 如果当前没有事务, 就新建一个事务, 如果已经存在一个事务中, 加入到这个事务中. |
+| SUPPORTS              | 支持当前事务, 如果当前没有事务, 就以非事务方式执行           |
+| MANDATORY             | 使用当前的事务, 如果当前没有事务, 就抛出异常                 |
+| REQUIRES_NEW          | 新建事务, 如果当前存在事务, 把当前事务挂起                   |
+| NOT_SUPPORTED         | 以非事务方式执行操作, 如果当前存在事务, 就把当前事务挂起     |
+| NEVER                 | 以非事务方式执行, 如果当前存在事务, 则抛出异常. (几乎不用)   |
+| NESTED                | 如果当前存在事务, 则在嵌套事务内执行.<br />如果当前没有事务, 则执行与PROPAGATION REQUIRED类似的操作 |
+
+---
+
+```java
+public @interface Transactional {
+    Propagation propagation() default Propagation.REQUIRED;
+}
+```
+
+默认的传播方式是REQUIRED
+
+---
+
+api层的pom文件添加test依赖
+
+```xml
+<!-- test -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+### 不加注解的情况
+
+所有的方法上都不加@Transactional注解. 以下省略接口. 只记录实现
+
+Test:
+
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest(classes = Application.class)
+public class TransTest {
+
+    @Autowired
+    private StuService stuService;
+
+    @Autowired
+    private TestTransService testTransService;
+
+    @Test
+    public void myTest() {
+        // stuService.testPropagationTrans();
+        testTransService.testPropagationTrans();
+    }
+}
+```
+
+TestTransServiceImpl: 
+
+```java
+package com.imooc.service.impl;
+
+@Service
+public class TestTransServiceImpl implements TestTransService {
+
+    @Autowired
+    private StuService stuService;
+
+    // @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void testPropagationTrans() {
+        stuService.saveParent();
+        stuService.saveChildren();
+    }
+}
+```
+
+StuServiceImpl: 
+
+```java
+package com.imooc.service.impl;
+
+@Service
+public class StuServiceImpl implements StuService {
+
+    @Autowired
+    private StuMapper stuMapper;
+
+    @Override
+    public void saveParent() {
+        Stu stu = new Stu();
+        stu.setName("parent");
+        stu.setAge(19);
+        stuMapper.insert(stu);
+
+    }
+
+    // @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void saveChildren() {
+        saveChild1();
+        int a = 1 / 0;
+        saveChild2();
+    }
+
+    private void saveChild1() {
+        Stu stu1 = new Stu();
+        stu1.setName("child-1");
+        stu1.setAge(11);
+        stuMapper. insert(stu1);
+
+    }
+
+    private void saveChild2() {
+        Stu stu2 = new Stu();
+        stu2.setName("child-2");
+        stu2.setAge(12);
+        stuMapper. insert(stu2);
+
+    }
+}
+```
+
+在不加注解的情况下, 运行test, 控制台中报错:
+
+```
+D:\JDK\jdk1.8\bin\java.exe -ea -Didea.test.cyclic.buffer.size=1048576 "-javaagent:D:\Program Files\JetBrains\IntelliJ IDEA 2021.1.2\lib\idea_rt.jar=16605:D:\Program Files\JetBrains\IntelliJ IDEA 2021.1.2\bin" -Dfile.encoding=UTF-8 -classpath "D:\Program Files\JetBrains\IntelliJ IDEA 2021.1.2\lib\idea_rt.jar;D:\Program Files\JetBrains\IntelliJ IDEA 2021.1.2\plugins\junit\lib\junit5-rt.jar;D:\Program Files\JetBrains\IntelliJ IDEA 2021.1.2\plugins\junit\lib\junit-rt.jar;D:\JDK\jdk1.8\jre\lib\charsets.jar;D:\JDK\jdk1.8\jre\lib\deploy.jar;D:\JDK\jdk1.8\jre\lib\ext\access-bridge-64.jar;D:\JDK\jdk1.8\jre\lib\ext\cldrdata.jar;D:\JDK\jdk1.8\jre\lib\ext\dnsns.jar;D:\JDK\jdk1.8\jre\lib\ext\jaccess.jar;D:\JDK\jdk1.8\jre\lib\ext\jfxrt.jar;D:\JDK\jdk1.8\jre\lib\ext\localedata.jar;D:\JDK\jdk1.8\jre\lib\ext\nashorn.jar;D:\JDK\jdk1.8\jre\lib\ext\sunec.jar;D:\JDK\jdk1.8\jre\lib\ext\sunjce_provider.jar;D:\JDK\jdk1.8\jre\lib\ext\sunmscapi.jar;D:\JDK\jdk1.8\jre\lib\ext\sunpkcs11.jar;D:\JDK\jdk1.8\jre\lib\ext\zipfs.jar;D:\JDK\jdk1.8\jre\lib\javaws.jar;D:\JDK\jdk1.8\jre\lib\jce.jar;D:\JDK\jdk1.8\jre\lib\jfr.jar;D:\JDK\jdk1.8\jre\lib\jfxswt.jar;D:\JDK\jdk1.8\jre\lib\jsse.jar;D:\JDK\jdk1.8\jre\lib\management-agent.jar;D:\JDK\jdk1.8\jre\lib\plugin.jar;D:\JDK\jdk1.8\jre\lib\resources.jar;D:\JDK\jdk1.8\jre\lib\rt.jar;E:\Github\springboot-study\foodie-study\foodie-dev-api\target\test-classes;E:\Github\springboot-study\foodie-study\foodie-dev-api\target\classes;E:\Github\springboot-study\foodie-study\foodie-dev-service\target\classes;E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes;E:\Github\springboot-study\foodie-study\foodie-dev-pojo\target\classes;E:\Github\springboot-study\foodie-study\foodie-dev-common\target\classes;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-starter-test\2.1.5.RELEASE\spring-boot-starter-test-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-test\2.1.5.RELEASE\spring-boot-test-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-test-autoconfigure\2.1.5.RELEASE\spring-boot-test-autoconfigure-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\com\jayway\jsonpath\json-path\2.4.0\json-path-2.4.0.jar;D:\Maven\MavenRepository\net\minidev\json-smart\2.3\json-smart-2.3.jar;D:\Maven\MavenRepository\net\minidev\accessors-smart\1.2\accessors-smart-1.2.jar;D:\Maven\MavenRepository\org\ow2\asm\asm\5.0.4\asm-5.0.4.jar;D:\Maven\MavenRepository\junit\junit\4.12\junit-4.12.jar;D:\Maven\MavenRepository\org\assertj\assertj-core\3.11.1\assertj-core-3.11.1.jar;D:\Maven\MavenRepository\org\mockito\mockito-core\2.23.4\mockito-core-2.23.4.jar;D:\Maven\MavenRepository\net\bytebuddy\byte-buddy\1.9.12\byte-buddy-1.9.12.jar;D:\Maven\MavenRepository\net\bytebuddy\byte-buddy-agent\1.9.12\byte-buddy-agent-1.9.12.jar;D:\Maven\MavenRepository\org\objenesis\objenesis\2.6\objenesis-2.6.jar;D:\Maven\MavenRepository\org\hamcrest\hamcrest-core\1.3\hamcrest-core-1.3.jar;D:\Maven\MavenRepository\org\hamcrest\hamcrest-library\1.3\hamcrest-library-1.3.jar;D:\Maven\MavenRepository\org\skyscreamer\jsonassert\1.5.0\jsonassert-1.5.0.jar;D:\Maven\MavenRepository\com\vaadin\external\google\android-json\0.0.20131108.vaadin1\android-json-0.0.20131108.vaadin1.jar;D:\Maven\MavenRepository\org\springframework\spring-core\5.1.7.RELEASE\spring-core-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\spring-jcl\5.1.7.RELEASE\spring-jcl-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\spring-test\5.1.7.RELEASE\spring-test-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\xmlunit\xmlunit-core\2.6.2\xmlunit-core-2.6.2.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-starter\2.1.5.RELEASE\spring-boot-starter-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot\2.1.5.RELEASE\spring-boot-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\spring-context\5.1.7.RELEASE\spring-context-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-autoconfigure\2.1.5.RELEASE\spring-boot-autoconfigure-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\javax\annotation\javax.annotation-api\1.3.2\javax.annotation-api-1.3.2.jar;D:\Maven\MavenRepository\org\yaml\snakeyaml\1.23\snakeyaml-1.23.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-starter-web\2.1.5.RELEASE\spring-boot-starter-web-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-starter-json\2.1.5.RELEASE\spring-boot-starter-json-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\com\fasterxml\jackson\core\jackson-databind\2.9.8\jackson-databind-2.9.8.jar;D:\Maven\MavenRepository\com\fasterxml\jackson\core\jackson-core\2.9.8\jackson-core-2.9.8.jar;D:\Maven\MavenRepository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.9.8\jackson-datatype-jdk8-2.9.8.jar;D:\Maven\MavenRepository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.9.8\jackson-datatype-jsr310-2.9.8.jar;D:\Maven\MavenRepository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.9.8\jackson-module-parameter-names-2.9.8.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-starter-tomcat\2.1.5.RELEASE\spring-boot-starter-tomcat-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\org\apache\tomcat\embed\tomcat-embed-core\9.0.19\tomcat-embed-core-9.0.19.jar;D:\Maven\MavenRepository\org\apache\tomcat\embed\tomcat-embed-el\9.0.19\tomcat-embed-el-9.0.19.jar;D:\Maven\MavenRepository\org\apache\tomcat\embed\tomcat-embed-websocket\9.0.19\tomcat-embed-websocket-9.0.19.jar;D:\Maven\MavenRepository\org\hibernate\validator\hibernate-validator\6.0.16.Final\hibernate-validator-6.0.16.Final.jar;D:\Maven\MavenRepository\javax\validation\validation-api\2.0.1.Final\validation-api-2.0.1.Final.jar;D:\Maven\MavenRepository\org\jboss\logging\jboss-logging\3.3.2.Final\jboss-logging-3.3.2.Final.jar;D:\Maven\MavenRepository\org\springframework\spring-web\5.1.7.RELEASE\spring-web-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\spring-beans\5.1.7.RELEASE\spring-beans-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\spring-webmvc\5.1.7.RELEASE\spring-webmvc-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\spring-expression\5.1.7.RELEASE\spring-expression-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-starter-aop\2.1.5.RELEASE\spring-boot-starter-aop-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\spring-aop\5.1.7.RELEASE\spring-aop-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\aspectj\aspectjweaver\1.9.4\aspectjweaver-1.9.4.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-configuration-processor\2.1.5.RELEASE\spring-boot-configuration-processor-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\mysql\mysql-connector-java\5.1.41\mysql-connector-java-5.1.41.jar;D:\Maven\MavenRepository\org\mybatis\spring\boot\mybatis-spring-boot-starter\2.1.0\mybatis-spring-boot-starter-2.1.0.jar;D:\Maven\MavenRepository\org\springframework\boot\spring-boot-starter-jdbc\2.1.5.RELEASE\spring-boot-starter-jdbc-2.1.5.RELEASE.jar;D:\Maven\MavenRepository\com\zaxxer\HikariCP\3.2.0\HikariCP-3.2.0.jar;D:\Maven\MavenRepository\org\springframework\spring-jdbc\5.1.7.RELEASE\spring-jdbc-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\spring-tx\5.1.7.RELEASE\spring-tx-5.1.7.RELEASE.jar;D:\Maven\MavenRepository\org\mybatis\spring\boot\mybatis-spring-boot-autoconfigure\2.1.0\mybatis-spring-boot-autoconfigure-2.1.0.jar;D:\Maven\MavenRepository\org\mybatis\mybatis\3.5.2\mybatis-3.5.2.jar;D:\Maven\MavenRepository\org\mybatis\mybatis-spring\2.0.2\mybatis-spring-2.0.2.jar;D:\Maven\MavenRepository\tk\mybatis\mapper-spring-boot-starter\2.1.5\mapper-spring-boot-starter-2.1.5.jar;D:\Maven\MavenRepository\tk\mybatis\mapper-core\1.1.5\mapper-core-1.1.5.jar;D:\Maven\MavenRepository\javax\persistence\persistence-api\1.0\persistence-api-1.0.jar;D:\Maven\MavenRepository\tk\mybatis\mapper-base\1.1.5\mapper-base-1.1.5.jar;D:\Maven\MavenRepository\tk\mybatis\mapper-weekend\1.1.5\mapper-weekend-1.1.5.jar;D:\Maven\MavenRepository\tk\mybatis\mapper-spring\1.1.5\mapper-spring-1.1.5.jar;D:\Maven\MavenRepository\tk\mybatis\mapper-extra\1.1.5\mapper-extra-1.1.5.jar;D:\Maven\MavenRepository\tk\mybatis\mapper-spring-boot-autoconfigure\2.1.5\mapper-spring-boot-autoconfigure-2.1.5.jar;D:\Maven\MavenRepository\com\github\pagehelper\pagehelper-spring-boot-starter\1.2.12\pagehelper-spring-boot-starter-1.2.12.jar;D:\Maven\MavenRepository\com\github\pagehelper\pagehelper-spring-boot-autoconfigure\1.2.12\pagehelper-spring-boot-autoconfigure-1.2.12.jar;D:\Maven\MavenRepository\com\github\pagehelper\pagehelper\5.1.10\pagehelper-5.1.10.jar;D:\Maven\MavenRepository\com\github\jsqlparser\jsqlparser\2.0\jsqlparser-2.0.jar;D:\Maven\MavenRepository\commons-codec\commons-codec\1.11\commons-codec-1.11.jar;D:\Maven\MavenRepository\org\apache\commons\commons-lang3\3.4\commons-lang3-3.4.jar;D:\Maven\MavenRepository\commons-io\commons-io\1.3.2\commons-io-1.3.2.jar;D:\Maven\MavenRepository\org\projectlombok\lombok\1.18.22\lombok-1.18.22.jar;D:\Maven\MavenRepository\io\springfox\springfox-swagger2\2.4.0\springfox-swagger2-2.4.0.jar;D:\Maven\MavenRepository\io\swagger\swagger-annotations\1.5.6\swagger-annotations-1.5.6.jar;D:\Maven\MavenRepository\io\swagger\swagger-models\1.5.6\swagger-models-1.5.6.jar;D:\Maven\MavenRepository\com\fasterxml\jackson\core\jackson-annotations\2.9.0\jackson-annotations-2.9.0.jar;D:\Maven\MavenRepository\io\springfox\springfox-spi\2.4.0\springfox-spi-2.4.0.jar;D:\Maven\MavenRepository\io\springfox\springfox-core\2.4.0\springfox-core-2.4.0.jar;D:\Maven\MavenRepository\io\springfox\springfox-schema\2.4.0\springfox-schema-2.4.0.jar;D:\Maven\MavenRepository\io\springfox\springfox-swagger-common\2.4.0\springfox-swagger-common-2.4.0.jar;D:\Maven\MavenRepository\io\springfox\springfox-spring-web\2.4.0\springfox-spring-web-2.4.0.jar;D:\Maven\MavenRepository\com\google\guava\guava\18.0\guava-18.0.jar;D:\Maven\MavenRepository\com\fasterxml\classmate\1.4.0\classmate-1.4.0.jar;D:\Maven\MavenRepository\org\springframework\plugin\spring-plugin-core\1.2.0.RELEASE\spring-plugin-core-1.2.0.RELEASE.jar;D:\Maven\MavenRepository\org\springframework\plugin\spring-plugin-metadata\1.2.0.RELEASE\spring-plugin-metadata-1.2.0.RELEASE.jar;D:\Maven\MavenRepository\io\springfox\springfox-swagger-ui\2.4.0\springfox-swagger-ui-2.4.0.jar;D:\Maven\MavenRepository\com\github\xiaoymin\swagger-bootstrap-ui\1.6\swagger-bootstrap-ui-1.6.jar;D:\Maven\MavenRepository\org\slf4j\slf4j-api\1.7.21\slf4j-api-1.7.21.jar;D:\Maven\MavenRepository\org\slf4j\slf4j-log4j12\1.7.21\slf4j-log4j12-1.7.21.jar;D:\Maven\MavenRepository\log4j\log4j\1.2.17\log4j-1.2.17.jar" com.intellij.rt.junit.JUnitStarter -ideVersion5 -junit4 TransTest,myTest
+INFO  SpringBootTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [TransTest], using SpringBootContextLoader
+log4j:ERROR Failed to rename [/workspaces/logs/foodie-api/imooc.log] to [/workspaces/logs/foodie-api/imooc.log.2022-01-26-12-59].
+INFO  AbstractContextLoader:264 - Could not detect default resource locations for test class [TransTest]: no resource found for suffixes {-context.xml, Context.groovy}.
+INFO  SpringBootTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener]
+INFO  SpringBootTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@5cee5251, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@433d61fb, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@5c909414, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@4b14c583, org.springframework.test.context.support.DirtiesContextTestExecutionListener@65466a6a, org.springframework.test.context.transaction.TransactionalTestExecutionListener@4ddced80, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@1534f01b, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@78e117e3, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@2ea227af, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@4386f16, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@363ee3a2, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@4690b489]
+INFO  Version:21 - HV000001: Hibernate Validator 6.0.16.Final
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::        (v2.1.5.RELEASE)
+
+INFO  TransTest:50 - Starting TransTest on DESKTOP-4DCIJ80 with PID 14980 (started by 12280 in E:\Github\springboot-study\foodie-study\foodie-dev-api)
+INFO  TransTest:675 - No active profile set, falling back to default profiles: default
+WARN  ClassPathMapperScanner:44 - No MyBatis mapper was found in '[com.imooc]' package. Please check your configuration.
+INFO  PostProcessorRegistrationDelegate$BeanPostProcessorChecker:330 - Bean 'org.springframework.transaction.annotation.ProxyTransactionManagementConfiguration' of type [org.springframework.transaction.annotation.ProxyTransactionManagementConfiguration$$EnhancerBySpringCGLIB$$720d9f0b] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+Logging initialized using 'class org.apache.ibatis.logging.stdout.StdOutImpl' adapter.
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\CarouselMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\CategoryMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\CategoryMapperCustom.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\ItemsCommentsMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\ItemsImgMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\ItemsMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\ItemsMapperCustom.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\ItemsParamMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\ItemsSpecMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\OrderItemsMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\OrderStatusMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\OrdersMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\StuMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\UserAddressMapper.xml]'
+Parsed mapper file: 'file [E:\Github\springboot-study\foodie-study\foodie-dev-mapper\target\classes\mapper\UsersMapper.xml]'
+INFO  ThreadPoolTaskExecutor:171 - Initializing ExecutorService 'applicationTaskExecutor'
+INFO  MapperCacheDisabler:60 - Clear tk.mybatis.mapper.util.MsUtil CLASS_CACHE cache.
+INFO  MapperCacheDisabler:60 - Clear tk.mybatis.mapper.genid.GenIdUtil CACHE cache.
+INFO  MapperCacheDisabler:60 - Clear tk.mybatis.mapper.version.VersionUtil CACHE cache.
+INFO  MapperCacheDisabler:83 - Clear EntityHelper entityTableMap cache.
+Logging initialized using 'class org.apache.ibatis.logging.stdout.StdOutImpl' adapter.
+INFO  DocumentationPluginsBootstrapper:84 - Context refreshed
+INFO  DocumentationPluginsBootstrapper:87 - Found 1 custom documentation plugin(s)
+INFO  ApiListingReferenceScanner:44 - Scanning for api listing references
+INFO  TransTest:59 - Started TransTest in 10.46 seconds (JVM running for 12.077)
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.TestTransServiceImpl.testPropagationTrans ====
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.StuServiceImpl.saveParent ====
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@69ec93c2] was not registered for synchronization because synchronization is not active
+INFO  HikariDataSource:110 - DataSourceHikariCP - Starting...
+INFO  HikariDataSource:123 - DataSourceHikariCP - Start completed.
+JDBC Connection [HikariProxyConnection@918584437 wrapping com.mysql.jdbc.JDBC4Connection@544e3679] will not be managed by Spring
+==>  Preparing: INSERT INTO stu ( id,name,age ) VALUES( ?,?,? ) 
+==> Parameters: null, parent(String), 19(Integer)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@69ec93c2]
+INFO  ServiceLogAspect:64 - ====== proceed end. duration: 846 ms ======
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.StuServiceImpl.saveChildren ====
+Creating a new SqlSession
+SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@747f6c5a] was not registered for synchronization because synchronization is not active
+JDBC Connection [HikariProxyConnection@1726169577 wrapping com.mysql.jdbc.JDBC4Connection@544e3679] will not be managed by Spring
+==>  Preparing: INSERT INTO stu ( id,name,age ) VALUES( ?,?,? ) 
+==> Parameters: null, child-1(String), 11(Integer)
+<==    Updates: 1
+Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@747f6c5a]
+java.lang.ArithmeticException: / by zero
+```
+
+然后刷新数据库可以看到在表中保存了两条数据
+
+![image-20220126143036178](img/foodie-study/image-20220126143036178.png)
+
+分析saveChildren()的代码
+
+```java
+@Override
+public void saveChildren() {
+    saveChild1();
+    int a = 1 / 0;
+    saveChild2();
+}
+```
+
+saveChild1()成功, 然后发生了异常, child2无法保存, 整个方法没有回滚.
+
+saveparent没有影响
+
+### 开启事务1
+
+TestTransServiceImpl的testPropagationTrans方法中开启事务, 
+
+```java
+@Transactional(propagation = Propagation.REQUIRED)
+@Override
+public void testPropagationTrans() {
+    stuService.saveParent();
+    stuService.saveChildren();
+}
+```
+
+然后再运行, 控制台中报错
+
+```
+INFO  DocumentationPluginsBootstrapper:84 - Context refreshed
+INFO  DocumentationPluginsBootstrapper:87 - Found 1 custom documentation plugin(s)
+INFO  ApiListingReferenceScanner:44 - Scanning for api listing references
+INFO  TransTest:59 - Started TransTest in 9.502 seconds (JVM running for 10.859)
+INFO  HikariDataSource:110 - DataSourceHikariCP - Starting...
+INFO  HikariDataSource:123 - DataSourceHikariCP - Start completed.
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.TestTransServiceImpl.testPropagationTrans ====
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.StuServiceImpl.saveParent ====
+Creating a new SqlSession
+Registering transaction synchronization for SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b6fb197]
+JDBC Connection [HikariProxyConnection@767535474 wrapping com.mysql.jdbc.JDBC4Connection@d2708a7] will be managed by Spring
+==>  Preparing: INSERT INTO stu ( id,name,age ) VALUES( ?,?,? ) 
+==> Parameters: null, parent(String), 19(Integer)
+<==    Updates: 1
+Releasing transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b6fb197]
+INFO  ServiceLogAspect:64 - ====== proceed end. duration: 159 ms ======
+INFO  ServiceLogAspect:42 - ==== proceed com.imooc.service.impl.StuServiceImpl.saveChildren ====
+Fetched SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b6fb197] from current transaction
+==>  Preparing: INSERT INTO stu ( id,name,age ) VALUES( ?,?,? ) 
+==> Parameters: null, child-1(String), 11(Integer)
+<==    Updates: 1
+Releasing transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b6fb197]
+java.lang.ArithmeticException: / by zero
+
+Transaction synchronization committing SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b6fb197]
+Transaction synchronization deregistering SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b6fb197]
+Transaction synchronization closing SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@2b6fb197]
+INFO  ThreadPoolTaskExecutor:208 - Shutting down ExecutorService 'applicationTaskExecutor'
+INFO  HikariDataSource:350 - DataSourceHikariCP - Shutdown initiated...
+INFO  HikariDataSource:352 - DataSourceHikariCP - Shutdown completed.
+```
+
+数据库中的数据: 无
+
+因为Propagation.REQUIRED会将事务传递到下一个方法中, 即使子方法中没有注解, 当其中的字方法saveChildren方法抛出异常之后, 事务都会整体回滚.
+
+
+
+
+
+
+
+### 开启事务2
+
+TestTransServiceImpl中注释掉事务注解
+
+```java
+package com.imooc.service.impl;
+@Service
+public class TestTransServiceImpl implements TestTransService {
+
+    @Autowired
+    private StuService stuService;
+
+
+    // @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void testPropagationTrans() {
+        stuService.saveParent();
+        stuService.saveChildren();
+    }
+}
+```
+
+
+
+```java
+@Transactional(propagation = Propagation.REQUIRED)
+@Override
+public void saveChildren() {
+    saveChild1();
+    int a = 1 / 0;
+    saveChild2();
+}
+```
 
 
 
@@ -1122,7 +1435,19 @@ saveorder
 
 
 
-### 为何不使用@EnableTransactionManagement就能使用事务
+
+
+
+
+
+
+
+
+
+
+
+
+## 为何不使用@EnableTransactionManagement就能使用事务
 
 @SpringApplication -> @EnableAutoConfiguration -> @Import(AutoConfigurationImportSelector.class) -> AutoConfigurationImportSelector.class -> selectImports -> getAutoConfigurationEntry -> getCandidateConfigurations -> spring.factories
 
@@ -7697,7 +8022,13 @@ java.lang.RuntimeException: 订单创建失败，原因：库存不足!
 
 @Transactional注解不起作用, 就是当库存设置为0的时候, 抛出错误, 但是事务并没有回滚, 数据仍然插入了orders和ordersItem表
 
+查询后, 首先设置的是自动提交autocommit为off, [ref](https://blog.csdn.net/u013905744/article/details/79164071)
 
+```mysql
+show session variables like 'autocommit';
+
+set session autocommit = 0;
+```
 
 
 
