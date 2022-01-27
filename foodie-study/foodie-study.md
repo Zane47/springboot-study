@@ -8096,14 +8096,6 @@ created() {
 },
 ```
 
-
-
-
-
-
-
-
-
 # 扣减库存整合分布式锁
 
 目前在项目中, 基于数据库update行锁去扣减库存, 这种方案是不错的, 完全可以解决超卖的问题, 在一般情况下, 我们可以大胆使用. 如果大家担心在访问量激增的情况下, 对数据库压力较大, 我们可以使用基于Redis的分布式锁, 将压力从数据库层前移到Redis层。Redis在我们的项目中已经存在了, 我们不需过多的配置. 使用分布式锁呢, 我们采用Redisson这个客户端, 需要在pom文件中引入. 
@@ -8172,19 +8164,131 @@ private RedissonClient redisson;
 
 ## 微信支付
 
-
-
 ### 支付中心订单设计
 
+查看获取微信支付二维码的前端代码
+
+```javascript
+getWXPayQRCodeUrl(orderId) {
+    var userInfo = this.userInfo;
+
+    // 发起请求获得微信支付扫描二维码
+    var paymentServerUrl = app.paymentServerUrl;
+    axios.defaults.withCredentials = true;
+    axios.post(
+        paymentServerUrl + '/payment/getWXPayQRCode?merchantUserId=' + userInfo.id + "&merchantOrderId=" + orderId, 
+        {},
+        {
+            headers: {
+                'imoocUserId': "imooc",
+                'password': "imooc"
+            }
+        })
+        .then(res => {
+        if (res.data.status == 200) {
+            var paymentInfo = res.data.data;
+            this.paymentInfo = paymentInfo;
+            // qrCodeUrl
+            // console.log(paymentInfo);
+
+            $('#wxqrcode-display').qrcode({
+                width: 200,
+                height:200,
+                text: paymentInfo.qrCodeUrl
+            });
 
 
+        } else {
+            alert(res.data.msg);
+        }
+    });
+},
+```
 
+其中的`app.paymentServerUrl: "http://192.168.1.3:8089" // 支付中心服务地址 `
 
+这个是云端的局域网环境中的地址, 但是现在使用的是
 
+`paymentServerUrl: "http://payment.t.mukewang.com/foodie-payment",// 支付中心服务地址`
 
+参数是: merchantUserId和merchantOrderId, 对应的就是userid和orderid. 提供给接口后返回支付的二维码.
 
+-> 需要权限和密码, 到支付中心中付款. 
+
+---
+
+用户购物车然后付款的时候, 向后台发送请求创建订单, 然后向支付中心发送请求进行支付. 
+
+-> 支付中心也需要知道你需要支付的订单是哪些. 所以也需要进行设计
+
+新建支付中心的数据库: itzixi-pay. 其中的orders数据表通过脚本`支付中心订单表-orders.sql`导入
+
+```mysql
+-- auto-generated definition
+create table orders
+(
+    id                varchar(64)  not null comment '订单主键'
+    primary key,
+    merchant_order_id varchar(64)  not null comment '商户订单号',
+    merchant_user_id  varchar(64)  not null comment '商户方的发起用户的用户主键id',
+    amount            int          not null comment '实际支付总金额（包含商户所支付的订单费邮费总额）',
+    pay_method        int          not null comment '支付方式',
+    pay_status        int          not null comment '支付状态 10：未支付 20：已支付 30：支付失败 40：已退款',
+    come_from         varchar(128) not null comment '从哪一端来的，比如从天天吃货这门实战过来的',
+    return_url        varchar(255) not null comment '支付成功后的通知地址，这个是开发者那一段的，不是第三方支付通知的地址',
+    is_delete         int          not null comment '逻辑删除状态;1: 删除 0:未删除',
+    created_time      datetime     not null comment '创建时间（成交时间）'
+)
+    comment '订单表;' charset = utf8mb4;
+```
 
 ### 微信支付时序图
+
+return_url: '支付成功后的通知地址，这个是开发者那一段的，不是第三方支付通知的地址',
+
+首先要了解支付的流程, 回调通知
+
+[微信的支付开发文档](https://pay.weixin.qq.com/wiki/doc/api/index.html) -> native支付 -> 扫码支付 -> [开发指引](https://pay.weixin.qq.com/wiki/doc/api/native.php?chapter=6_5&index=3)
+
+![原生支付模式二时序图](https://pay.weixin.qq.com/wiki/doc/apiv3/assets/img/pay/wechatpay/5_0.png)
+
+这里的"商户后台系统"对应就是现在的"支付中心".因为自己没有商户资质, 直接使用提供的支付中心代码.
+
+1. 生成订单. 这里的订单就是支付中心中的订单, 并不是现在后台中的orders. 还没有生成
+2. 调用统一下单API. 支付中心发送到微信端
+3. 微信端生成预支付交易. 微信在自己的系统中生成订单, 属于微信端的订单, 历史凭证. 
+
+返回预支付交易链接(code_url). ps: code_url有效期为2小时，过期后扫码不能再发起支付
+
+4. 将链接生成二维码图片(code_url)
+
+二维码图片展示给用户
+
+5.6.7.8.
+
+并行处理:
+
+9.返回支付结果. 同步操作, 在微信上同步展示是否支付成功.
+
+10. 异步通知商户支付结果. 异步通知回调支付中心, 在支付中心中开放接口给微信端调用通知我们付款成功or失败. 如果支持成功, 就在系统中将状态改为已支付. 异步操作. 
+
+这里的后台异步支付通知也需要进行书写以校验, 不可以仅以9.中的前段支付来作为支付是否成功的判断. 不安全.
+
+如果此时发生错误, 微信会一直通知给后台, 总共通知10次, 微信是有异步通知的频率
+
+微信异步通知频率为15/15/30/180/1800/1800/1800/1800/3600.单位：秒. 一但成功, 后续通知不再发送.
+
+11. 调用查询订单API. 历史记录的查询功能
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8435,6 +8539,8 @@ private RedissonClient redisson;
 在订单的超卖问题中, 一样的问题, 如果产生了超卖的现象, 应该是会抛出异常, 不会产生orders和ordersitem的数据, 但是本项目中仍然产生了. 
 
 
+
+需要查看@Transactional源码
 
 
 
