@@ -5662,7 +5662,7 @@ public JsonResult catItems(
 
 ```javascript
 addToCart() {
-    // 由于cookie大小限制为4k，另外课程第一阶段是没有redis的, 所以相关暂存性内容会存入到cookie中
+    // 由于cookie大小限制为4k, 另外课程第一阶段是没有redis的, 所以相关暂存性内容会存入到cookie中
     var shopcartCounts = app.getShopcartItemCounts();
     if (shopcartCounts >= 8) {
         alert("您购物车中的食物太多啦~请把它们带回家吧~！");
@@ -6002,7 +6002,7 @@ renderShopcart() {
             itemSpecIds += ",";
         }
     }
-    // 1001，2002，3003，4004
+    // 1001, 2002, 3003, 4004
 
     // 请求后端获得最新数据
     var serverUrl = app.serverUrl;
@@ -6237,7 +6237,7 @@ delFromCart(specId) {
             break;
         }
     }
-    // 重新放入cookie，更新一下
+    // 重新放入cookie, 更新一下
     app.setCookie("shopcart", JSON.stringify(shopcartList));
     this.shopcartList = shopcartList;
 
@@ -7346,7 +7346,7 @@ submitOrder() {
     // 判断提交的商品不能为空
     var orderItemList = this.orderItemList;
     if (orderItemList == null || orderItemList == undefined || orderItemList == '' || orderItemList.length <= 0) {
-        alert("没有商品信息，订单无法提交~！");
+        alert("没有商品信息, 订单无法提交~！");
         return;
     }
     // 拼接规格ids
@@ -7403,7 +7403,7 @@ submitOrder() {
             var orderId = res.data.data;
             // 判断是否微信还是支付宝支付
             if (choosedPayMethod == 1) {
-                // 微信支付则跳转到微信支付页面，并且获得支付二维码
+                // 微信支付则跳转到微信支付页面, 并且获得支付二维码
                 window.location.href = "wxpay.html?orderId=" + orderId;
             } else if (choosedPayMethod == 2) {
                 this.orderId = orderId;
@@ -7435,8 +7435,8 @@ Controller中
 
 ```
 1. 创建订单
-2. 创建订单以后，移除购物车中已结算(已提交)的商品
-3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+2. 创建订单以后, 移除购物车中已结算(已提交)的商品
+3. 向支付中心发送当前订单, 用于保存支付中心的订单数据
 ```
 
 
@@ -7474,8 +7474,8 @@ public class OrdersController extends BaseController {
      * 创建订单
      * <p>
      * 1. 创建订单
-     * 2. 创建订单以后，移除购物车中已结算(已提交)的商品
-     * 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+     * 2. 创建订单以后, 移除购物车中已结算(已提交)的商品
+     * 3. 向支付中心发送当前订单, 用于保存支付中心的订单数据
      */
     @ApiOperation(value = "user submit order", notes = "用户下单", httpMethod = "POST")
     @PostMapping("/create")
@@ -7491,14 +7491,14 @@ public class OrdersController extends BaseController {
         }
 
         // 1. 创建订单
-        // 2. 创建订单以后，移除购物车中已结算(已提交)的商品
-        // 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+        // 2. 创建订单以后, 移除购物车中已结算(已提交)的商品
+        // 3. 向支付中心发送当前订单, 用于保存支付中心的订单数据
 
         // ------------------------ 1. 创建订单 ------------------------
         OrderVO orderVO = orderService.createOrder(submitOrderBO);
         String orderId = orderVO.getOrderId();
 
-        // ------------------------ 2. 创建订单以后，移除购物车中已结算(已提交)的商品 ------------------------
+        // ------------------------ 2. 创建订单以后, 移除购物车中已结算(已提交)的商品 ------------------------
         return JsonResult.ok(orderId);
     }
 }
@@ -7574,12 +7574,12 @@ public class OrderServiceImpl implements OrderService {
      * <p>
      * 1. 新订单数据保存
      * 2. 循环根据itemSpecIds保存订单商品信息表
-     * 2.1 根据规格id，查询规格的具体信息，主要获取价格
-     * 2.2 根据商品id，获得商品信息以及商品图片
+     * 2.1 根据规格id, 查询规格的具体信息, 主要获取价格
+     * 2.2 根据商品id, 获得商品信息以及商品图片
      * 2.3 循环保存子订单数据到数据库
-     * 2.4 在用户提交订单以后，规格表中需要扣除库存
+     * 2.4 在用户提交订单以后, 规格表中需要扣除库存
      * 3. 保存订单状态表
-     * 4. 构建商户订单，用于传给支付中心
+     * 4. 构建商户订单, 用于传给支付中心
      * 5. 构建自定义订单vo
      */
     @Transactional(propagation = Propagation.REQUIRED)
@@ -7632,15 +7632,15 @@ public class OrderServiceImpl implements OrderService {
         // 优惠后的实际支付价格累计
         Integer actualPayAmout = 0;
         for (String itemSpecId : itemSpecArray) {
-            // todo: 整合redis后，商品购买的数量重新从redis的购物车中获取
+            // todo: 整合redis后, 商品购买的数量重新从redis的购物车中获取
             int buyCounts = 1;
 
-            //   2.1 根据规格id，查询规格的具体信息，主要获取价格
+            //   2.1 根据规格id, 查询规格的具体信息, 主要获取价格
             ItemsSpec itemsSpec = itemService.queryItemSpecBySpecId(itemSpecId);
             totalAmount += itemsSpec.getPriceNormal() * buyCounts;
             actualPayAmout += itemsSpec.getPriceDiscount() * buyCounts;
 
-            //   2.2 根据商品id，获得商品信息以及商品图片
+            //   2.2 根据商品id, 获得商品信息以及商品图片
             Items item = itemService.queryItemById(itemsSpec.getItemId());
             String imageUrl = itemService.queryItemMainImgByItemId(item.getId());
 
@@ -7658,7 +7658,7 @@ public class OrderServiceImpl implements OrderService {
 
             orderItemsMapper.insert(orderItem);
 
-            //   2.4 在用户提交订单以后，规格表中需要扣除库存
+            //   2.4 在用户提交订单以后, 规格表中需要扣除库存
             itemService.decreaseItemSpecStock(itemSpecId, buyCounts);
         }
 
@@ -7673,7 +7673,7 @@ public class OrderServiceImpl implements OrderService {
         orderStatus.setCreatedTime(new Date());
         orderStatusMapper.insert(orderStatus);
 
-        // 4. 构建商户订单，用于传给支付中心
+        // 4. 构建商户订单, 用于传给支付中心
         MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
         merchantOrdersVO.setMerchantOrderId(orderId);
         merchantOrdersVO.setMerchantUserId(submitOrderBO.getUserId());
@@ -7718,8 +7718,8 @@ package com.imooc.enums;
  */
 public enum OrderStatusEnum {
     WAIT_PAY(10, "待付款"),
-    WAIT_DELIVER(20, "已付款，待发货"),
-    WAIT_RECEIVE(30, "已发货，待收货"),
+    WAIT_DELIVER(20, "已付款, 待发货"),
+    WAIT_RECEIVE(30, "已发货, 待收货"),
     SUCCESS(40, "交易成功"),
     CLOSE(50, "交易关闭");
 
@@ -7767,10 +7767,10 @@ public UserAddress querySpecificAddress(String userId, String addressId) {
 * 在循环根据itemSpecIds保存订单商品信息表的时候, 需要获得商品的规格信息
 
 ```
-2.1 根据规格id，查询规格的具体信息，主要获取价格
-2.2 根据商品id，获得商品信息以及商品图片
+2.1 根据规格id, 查询规格的具体信息, 主要获取价格
+2.2 根据商品id, 获得商品信息以及商品图片
 2.3 循环保存子订单数据到数据库
-2.4 在用户提交订单以后，规格表中需要扣除库存
+2.4 在用户提交订单以后, 规格表中需要扣除库存
 ```
 
 接口
@@ -7835,8 +7835,8 @@ public String queryItemMainImgByItemId(String itemId) {
 public void decreaseItemSpecStock(String specId, int buyCounts) {
     // todo: 这里应该是分布式的形式
 
-    // synchronized 不推荐使用，集群下无用，性能低下
-    // 锁数据库(行锁): 不推荐，导致数据库性能低下
+    // synchronized 不推荐使用, 集群下无用, 性能低下
+    // 锁数据库(行锁): 不推荐, 导致数据库性能低下
     // 分布式锁 zookeeper redis
 
     // lockUtil.getLock(); -- 加锁
@@ -7844,7 +7844,7 @@ public void decreaseItemSpecStock(String specId, int buyCounts) {
     // 1. 查询库存
     //        int stock = 10;
 
-    // 2. 判断库存，是否能够减少到0以下
+    // 2. 判断库存, 是否能够减少到0以下
     //        if (stock - buyCounts < 0) {
     // 提示用户库存不够
     //            10 - 3 -3 - 5 = -1
@@ -7855,7 +7855,7 @@ public void decreaseItemSpecStock(String specId, int buyCounts) {
 
     int result = itemsMapperCustom.decreaseItemSpecStock(specId, buyCounts);
     if (result != 1) {
-        throw new RuntimeException("订单创建失败，原因：库存不足!");
+        throw new RuntimeException("订单创建失败, 原因：库存不足!");
     }
 
 }
@@ -7887,8 +7887,8 @@ public interface ItemsMapperCustom {
 接着回到Controller层中继续编写
 
 ```
-* 2. 创建订单以后，移除购物车中已结算(已提交)的商品
-* 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+* 2. 创建订单以后, 移除购物车中已结算(已提交)的商品
+* 3. 向支付中心发送当前订单, 用于保存支付中心的订单数据
 ```
 
 其中的2暂时不写, redis引入后编写
@@ -7913,8 +7913,8 @@ public class OrdersController extends BaseController {
      * 创建订单
      * <p>
      * 1. 创建订单
-     * 2. 创建订单以后，移除购物车中已结算(已提交)的商品
-     * 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+     * 2. 创建订单以后, 移除购物车中已结算(已提交)的商品
+     * 3. 向支付中心发送当前订单, 用于保存支付中心的订单数据
      */
     @ApiOperation(value = "user submit order", notes = "用户下单", httpMethod = "POST")
     @PostMapping("/create")
@@ -7930,31 +7930,31 @@ public class OrdersController extends BaseController {
         }
 
         // 1. 创建订单
-        // 2. 创建订单以后，移除购物车中已结算(已提交)的商品
-        // 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+        // 2. 创建订单以后, 移除购物车中已结算(已提交)的商品
+        // 3. 向支付中心发送当前订单, 用于保存支付中心的订单数据
 
         // ------------------------ 1. 创建订单 ------------------------
         OrderVO orderVO = orderService.createOrder(submitOrderBO);
         String orderId = orderVO.getOrderId();
 
-        // ------------------------ 2. 创建订单以后，移除购物车中已结算(已提交)的商品 ------------------------
+        // ------------------------ 2. 创建订单以后, 移除购物车中已结算(已提交)的商品 ------------------------
         /**
          * 1001
          * 2002 -> 用户购买
          * 3003 -> 用户购买
          * 4004
          */
-        // todo: 整合redis之后，完善购物车中的已结算商品清除，并且同步到前端的cookie
+        // todo: 整合redis之后, 完善购物车中的已结算商品清除, 并且同步到前端的cookie
 //        CookieUtils.setCookie(request, response, FOODIE_SHOPCART, "", true);
 
 
-        // ------------------------ 3. 向支付中心发送当前订单，用于保存支付中心的订单数据 ------------------------
+        // ------------------------ 3. 向支付中心发送当前订单, 用于保存支付中心的订单数据 ------------------------
 
         MerchantOrdersVO merchantOrdersVO = orderVO.getMerchantOrdersVO();
 
         merchantOrdersVO.setReturnUrl(payReturnUrl);
 
-        // 为了方便测试购买，所以所有的支付金额都统一改为1分钱
+        // 为了方便测试购买, 所以所有的支付金额都统一改为1分钱
         merchantOrdersVO.setAmount(1);
 
 
@@ -7970,7 +7970,7 @@ public class OrdersController extends BaseController {
         JsonResult body = responseEntity.getBody();
         if (body.getStatus() != 200) {
             logger.error("发送错误：{}", body.getMsg());
-            return JsonResult.errorMsg("支付中心订单创建失败，请联系管理员！");
+            return JsonResult.errorMsg("支付中心订单创建失败, 请联系管理员！");
         }
 
 
@@ -8005,7 +8005,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
 ```
 Releasing transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@5ac2a6e4]
-java.lang.RuntimeException: 订单创建失败，原因：库存不足!
+java.lang.RuntimeException: 订单创建失败, 原因：库存不足!
 ```
 
 务必要在上面加上扣减库存的方法上加上@Transactional(propagation = Propagation.REQUIRED)注解.
@@ -8047,7 +8047,7 @@ set session autocommit = 0;
         var orderId = res.data.data;
         // 判断是否微信还是支付宝支付
         if (choosedPayMethod == 1) {
-            // 微信支付则跳转到微信支付页面，并且获得支付二维码
+            // 微信支付则跳转到微信支付页面, 并且获得支付二维码
             window.location.href = "wxpay.html?orderId=" + orderId;
         } else if (choosedPayMethod == 2) {
             this.orderId = orderId;
@@ -8082,7 +8082,7 @@ created() {
 
     // 获得订单号
     var orderId = app.getUrlParam("orderId");
-    // 如果orderId为空，跳转到错误页面
+    // 如果orderId为空, 跳转到错误页面
     if (orderId == null || orderId == undefined || orderId == '') {
         app.goErrorPage();
         return;
@@ -8091,7 +8091,7 @@ created() {
     this.orderId = orderId;
     this.getWXPayQRCodeUrl(orderId);
 
-    // 每隔3秒调用后台方法，查看订单是否已经支付成功
+    // 每隔3秒调用后台方法, 查看订单是否已经支付成功
     this.setTimer();
 },
 ```
@@ -8109,7 +8109,7 @@ created() {
 </dependency>
 ```
 
-在这里我们采用了Redisson的starter，结合SpringBoot项目, 可以快速的启动, 无需过多的配置. 第二步, 我们在`ItemServiceImpl`类中注入Redisson的客户端`RedissonClient`, 如下：
+在这里我们采用了Redisson的starter, 结合SpringBoot项目, 可以快速的启动, 无需过多的配置. 第二步, 我们在`ItemServiceImpl`类中注入Redisson的客户端`RedissonClient`, 如下：
 
 ```java
 //分布式锁【2】自动注入
@@ -8117,13 +8117,13 @@ created() {
 private RedissonClient redisson;
 ```
 
-最后, 我们在扣减库存时, 先获取分布式锁, 只有获得锁的请求才能扣减库存, 没有获得锁的请求, 将等待. **这里我们需要注意的是获取锁时传入的key，这里我们采用的是商品的规格ID，在并发时, 规则ID相同时, 才会产生等待. **代码如下：
+最后, 我们在扣减库存时, 先获取分布式锁, 只有获得锁的请求才能扣减库存, 没有获得锁的请求, 将等待. **这里我们需要注意的是获取锁时传入的key, 这里我们采用的是商品的规格ID, 在并发时, 规则ID相同时, 才会产生等待. **代码如下：
 
 ```java
 		/**
          *  分布式锁【3】 编写业务代码
-         *  1、Redisson是基于Redis，使用Redisson之前, 项目必须使用Redis
-         *   2、注意getLock方法中的参数, 以specId作为参数, 每个specId一个key，和
+         *  1、Redisson是基于Redis, 使用Redisson之前, 项目必须使用Redis
+         *   2、注意getLock方法中的参数, 以specId作为参数, 每个specId一个key, 和
          *   数据库中的行锁是一致的, 不会是方法级别的锁
          */
         RLock rLock = redisson.getLock("SPECID_"+specId);
@@ -8234,8 +8234,8 @@ create table orders
     amount            int          not null comment '实际支付总金额（包含商户所支付的订单费邮费总额）',
     pay_method        int          not null comment '支付方式',
     pay_status        int          not null comment '支付状态 10：未支付 20：已支付 30：支付失败 40：已退款',
-    come_from         varchar(128) not null comment '从哪一端来的，比如从天天吃货这门实战过来的',
-    return_url        varchar(255) not null comment '支付成功后的通知地址，这个是开发者那一段的，不是第三方支付通知的地址',
+    come_from         varchar(128) not null comment '从哪一端来的, 比如从天天吃货这门实战过来的',
+    return_url        varchar(255) not null comment '支付成功后的通知地址, 这个是开发者那一段的, 不是第三方支付通知的地址',
     is_delete         int          not null comment '逻辑删除状态;1: 删除 0:未删除',
     created_time      datetime     not null comment '创建时间（成交时间）'
 )
@@ -8244,7 +8244,7 @@ create table orders
 
 ### 微信支付时序图
 
-return_url: '支付成功后的通知地址，这个是开发者那一段的，不是第三方支付通知的地址',
+return_url: '支付成功后的通知地址, 这个是开发者那一段的, 不是第三方支付通知的地址',
 
 首先要了解支付的流程, 回调通知
 
@@ -8258,7 +8258,7 @@ return_url: '支付成功后的通知地址，这个是开发者那一段的，�
 2. 调用统一下单API. 支付中心发送到微信端
 3. 微信端生成预支付交易. 微信在自己的系统中生成订单, 属于微信端的订单, 历史凭证. 
 
-返回预支付交易链接(code_url). ps: code_url有效期为2小时，过期后扫码不能再发起支付
+返回预支付交易链接(code_url). ps: code_url有效期为2小时, 过期后扫码不能再发起支付
 
 4. 将链接生成二维码图片(code_url)
 
@@ -8280,27 +8280,135 @@ return_url: '支付成功后的通知地址，这个是开发者那一段的，�
 
 11. 调用查询订单API. 历史记录的查询功能
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### 商户端支付成功回调接口
 
+写微信回调接口. 微信回调, 通知到商户后台系统(这里的支付中心), 然后支付中心通知自己的后台api, 后端api接到通知之后将对应的订单状态改成已支付. 
+
+对应到数据库中就是在支付中心的return_url就是商品后台的接收回调接口. (支付成功后的通知地址, 这个是开发者那一段的, 不是第三方支付通知的地址)
+
+在OrdersController中添加接口, 接受支付中心的post
+
+```java
+/**
+     * 支付中心通知后端系统, 修改订单状态
+     *
+     * @param merchantOrderId foodie-dev库orders表中的id
+     * @return
+     */
+@PostMapping("notifyMerchantOrderPaid")
+public JsonResult notifyMerchantOrderPaid(String merchantOrderId) {
+    orderService.updateOrderStatus(merchantOrderId, OrderStatusEnum.WAIT_DELIVER.type);
+
+    return JsonResult.ok();
+}
+```
+
+Service层中添加
+
+```java
+/**
+     * 更新订单状态
+     */
+public void updateOrderStatus(String merchantOrderId, Integer orderStatus);
+```
+
+impl
+
+```java
+/**
+     * 更新订单状态
+     */
+@Override
+public void updateOrderStatus(String merchantOrderId, Integer orderStatus) {
+    OrderStatus record = new OrderStatus();
+    record.setOrderId(merchantOrderId);
+    record.setOrderStatus(orderStatus);
+    record.setPayTime(new Date());
+    orderStatusMapper.updateByPrimaryKeySelective(record);
+}
+```
+
+因为这里是由支付中心通知后台, 然后后台返回数据, 所以不需要像前台那样子包装成JsonResult, 直接返回Integer即可.
+
+```java
+/**
+     * 支付中心通知后端系统, 修改订单状态
+     *
+     * @param merchantOrderId foodie-dev库orders表中的id
+     * @return
+     */
+@PostMapping("notifyMerchantOrderPaid")
+public Integer notifyMerchantOrderPaid(String merchantOrderId) {
+    orderService.updateOrderStatus(merchantOrderId, OrderStatusEnum.WAIT_DELIVER.type);
+
+    return HttpStatus.OK.value();
+}
+```
+
+直接postman测试
+
+![image-20220128115631834](img/foodie-study/image-20220128115631834.png)
+
+然后使用postman直接发送post请求
+
+![image-20220128115716444](img/foodie-study/image-20220128115716444.png)
+
+可以看到数据库中数据刷新
+
+![image-20220128115933450](img/foodie-study/image-20220128115933450.png)
+
+访问的地址是: `localhost:8088/orders/notifyMerchantOrderPaid?merchantOrderId=2201266YB4XX89D4`
+
+也就是说在支付中心itzixipay的orders表中的returnUrl就是该地址
+
+return_url: 支付成功后的通知地址, 这个是开发者那一段的, 不是第三方支付通知的地址
+
+写到baseController中
+
+```java
+package com.imooc.controller;
+
+import org.springframework.stereotype.Controller;
+
+@Controller
+public class BaseController {
+    public static final Integer COMMON_PAGE_SIZE = 10;
+    public static final Integer PAGE_SIZE = 20;
+
+
+    // ------------------------ order相关 ------------------------
+    public static final String FOODIE_SHOPCART = "shopcart";
+
+
+    // 支付中心的调用地址
+    String paymentUrl = "http://payment.t.mukewang.com/foodie-payment/payment/createMerchantOrder";		// produce
+
+    // 微信支付成功 -> 支付中心 -> 天天吃货平台
+    //                       |-> 回调通知的url
+    // String payReturnUrl = "http://api.z.mukewang.com/foodie-dev-api/orders/notifyMerchantOrderPaid";
+    String payReturnUrl = "localhost:8088/orders/notifyMerchantOrderPaid?merchantOrderId=2201266YB4XX89D4";
+
+
+}
+```
 
 
 
+---
+
+该接口提供给支付中心, 支付中心调用微信支付的接口, 然后支付成功后再通知我们的后台接口, 修改订单的状态.
 
 ### 商户订单
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8354,9 +8462,11 @@ return_url: '支付成功后的通知地址，这个是开发者那一段的，�
 
 ## 支付宝支付
 
+[api文档](https://open.alipay.com/developmentDocument.htm)
+
 ### 支付时序图
 
-
+![支付宝支付时序图](img/foodie-study/支付宝支付时序图.png)
 
 
 

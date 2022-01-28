@@ -162,4 +162,16 @@ public class OrderServiceImpl implements OrderService {
 
         return orderVO;
     }
+
+    /**
+     * 更新订单状态
+     */
+    @Override
+    public void updateOrderStatus(String merchantOrderId, Integer orderStatus) {
+        OrderStatus record = new OrderStatus();
+        record.setOrderId(merchantOrderId);
+        record.setOrderStatus(orderStatus);
+        record.setPayTime(new Date());
+        orderStatusMapper.updateByPrimaryKeySelective(record);
+    }
 }

@@ -11,7 +11,10 @@ public interface OrderService {
     public OrderVO createOrder(SubmitOrderBO submitOrderBO);
 
 
-
+    /**
+     * 更新订单状态
+     */
+    public void updateOrderStatus(String merchantOrderId, Integer orderStatus);
 
 
 

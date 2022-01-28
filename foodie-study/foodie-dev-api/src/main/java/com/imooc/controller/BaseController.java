@@ -17,7 +17,8 @@ public class BaseController {
 
     // 微信支付成功 -> 支付中心 -> 天天吃货平台
     //                       |-> 回调通知的url
-    String payReturnUrl = "http://api.z.mukewang.com/foodie-dev-api/orders/notifyMerchantOrderPaid";
+    // String payReturnUrl = "http://api.z.mukewang.com/foodie-dev-api/orders/notifyMerchantOrderPaid";
+    String payReturnUrl = "localhost:8088/orders/notifyMerchantOrderPaid?merchantOrderId=2201266YB4XX89D4";
 
 
 }
