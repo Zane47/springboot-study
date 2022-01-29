@@ -8392,17 +8392,122 @@ public class BaseController {
 }
 ```
 
-
-
 ---
 
 该接口提供给支付中心, 支付中心调用微信支付的接口, 然后支付成功后再通知我们的后台接口, 修改订单的状态.
 
-### 商户订单
+### 构建商户订单
+
+```java
+// 微信支付成功 -> 支付中心 -> 天天吃货平台
+//                       |-> 回调通知的url
+// String payReturnUrl = "http://api.z.mukewang.com/foodie-dev-api/orders/notifyMerchantOrderPaid";
+String payReturnUrl = "localhost:8088/orders/notifyMerchantOrderPaid?merchantOrderId=2201266YB4XX89D4";
+```
+
+微信支付成功 -> 支付中心 -> 天天吃货平台(foodie-study)
+
+payReturnUrl : |-> 回调通知的url
+
+---
+
+foodie-payment提供源码, 直接导入即可.
+
+查看foodie-payment中的PaymentController中的createMerchantOrder
+
+接受商户订单信息，保存到自己的数据库
+
+"自己的数据库": 就是支付中心的数据库(itzixi-pay)
+
+```java
+/**
+	 * 接受商户订单信息，保存到自己的数据库
+	 */
+@PostMapping("/createMerchantOrder")
+public IMOOCJSONResult createMerchantOrder(@RequestBody MerchantOrdersBO merchantOrdersBO, HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+    String merchantOrderId = merchantOrdersBO.getMerchantOrderId();             	// 订单id
+    String merchantUserId = merchantOrdersBO.getMerchantUserId();     		// 用户id
+    Integer amount = merchantOrdersBO.getAmount();    // 实际支付订单金额
+    Integer payMethod = merchantOrdersBO.getPayMethod();          	// 支付方式
+    String returnUrl = merchantOrdersBO.getReturnUrl();           	// 支付成功后的回调地址（学生自定义）
+
+    if (StringUtils.isBlank(merchantOrderId)) {
+        return IMOOCJSONResult.errorMsg("参数[orderId]不能为空");
+    }
+    if (StringUtils.isBlank(merchantUserId)) {
+        return IMOOCJSONResult.errorMsg("参数[userId]不能为空");
+    }
+    if (amount == null || amount < 1) {
+        return IMOOCJSONResult.errorMsg("参数[realPayAmount]不能为空并且不能小于1");
+    }
+    if (payMethod == null) {
+        return IMOOCJSONResult.errorMsg("参数[payMethod]不能为空并且不能小于1");
+    }
+    if (payMethod != PayMethod.WEIXIN.type && payMethod != PayMethod.ALIPAY.type) {
+        return IMOOCJSONResult.errorMsg("参数[payMethod]目前只支持微信支付或支付宝支付");
+    }
+    if (StringUtils.isBlank(returnUrl)) {
+        return IMOOCJSONResult.errorMsg("参数[returnUrl]不能为空");
+    }
+
+    // 保存传来的商户订单信息
+    boolean isSuccess = false;
+    try {
+        isSuccess = paymentOrderService.createPaymentOrder(merchantOrdersBO);
+    } catch (Exception e) {
+        e.printStackTrace();
+        IMOOCJSONResult.errorException(e.getMessage());
+    }
+
+    if (isSuccess) {
+        return IMOOCJSONResult.ok("商户订单创建成功！");
+    } else {
+        return IMOOCJSONResult.errorMsg("商户订单创建失败，请重试...");
+    }
+}
+```
+
+```java
+public class MerchantOrdersBO {
+    private String merchantOrderId;         // 商户订单号
+    private String merchantUserId;          // 商户方的发起用户的用户主键id
+    private Integer amount;                 // 实际支付总金额（包含商户所支付的订单费邮费总额）
+    private Integer payMethod;              // 支付方式 1:微信   2:支付宝
+    private String returnUrl;               // 支付成功后的回调地址（学生自定义）
+}
+```
+
+然后会在支付中心中创建订单
+
+```java
+@Transactional(propagation=Propagation.REQUIRED)
+@Override
+public boolean createPaymentOrder(MerchantOrdersBO merchantOrdersBO) {
+
+    String id = sid.nextShort();
+
+    Orders paymentOrder = new Orders();
+    BeanUtils.copyProperties(merchantOrdersBO, paymentOrder);
+
+    paymentOrder.setId(id);
+    paymentOrder.setPayStatus(PaymentStatus.WAIT_PAY.type);
+    paymentOrder.setComeFrom("foodie-study");
+    paymentOrder.setIsDelete(YesOrNo.NO.type);
+    paymentOrder.setCreatedTime(new Date());
+
+    int result = ordersMapper.insert(paymentOrder);
+    return result == 1 ? true : false;
+}
+```
+
+然后将订单创建是否成功的状态返回给foodie后台中
 
 
 
 
+
+在foodie的后台中, 也需要向支付中心的createMerchantOrder接口发送信息. 
 
 
 

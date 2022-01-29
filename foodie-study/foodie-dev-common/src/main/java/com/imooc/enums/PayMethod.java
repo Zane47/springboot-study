@@ -2,7 +2,7 @@ package com.imooc.enums;
 
 public enum PayMethod {
 
-    WECHATPAY(1, "WeChar"),
+    WECHATPAY(1, "WeChat"),
     ALIPAY(2, "AliPay");
 
     public final Integer type;
