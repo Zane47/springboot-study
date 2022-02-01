@@ -8503,13 +8503,18 @@ public boolean createPaymentOrder(MerchantOrdersBO merchantOrdersBO) {
 
 然后将订单创建是否成功的状态返回给foodie后台中
 
+---
 
+所以在foodie的后台中, 需要向支付中心的createMerchantOrder接口发送信息. 
 
+对应的支付中心中的接口响应为:
 
+```java
+@PostMapping("/createMerchantOrder")
+	public IMOOCJSONResult createMerchantOrder(@RequestBody MerchantOrdersBO merchantOrdersBO, HttpServletRequest request, HttpServletResponse response) throws Exception {}
+```
 
-在foodie的后台中, 也需要向支付中心的createMerchantOrder接口发送信息. 
-
-
+那么就要在foodie-study后台中传入MerchantOrdersBO
 
 
 
