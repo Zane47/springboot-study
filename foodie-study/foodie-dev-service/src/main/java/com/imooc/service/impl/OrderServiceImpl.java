@@ -140,22 +140,22 @@ public class OrderServiceImpl implements OrderService {
         newOrder.setRealPayAmount(actualPayAmout);
         ordersMapper.insert(newOrder);
 
-        // 3. 保存订单状态表
+        // ------------------------ 3. 保存订单状态表 ------------------------
         OrderStatus waitPayOrderStatus = new OrderStatus();
         waitPayOrderStatus.setOrderId(orderId);
         waitPayOrderStatus.setOrderStatus(OrderStatusEnum.WAIT_PAY.type);
         waitPayOrderStatus.setCreatedTime(new Date());
         orderStatusMapper.insert(waitPayOrderStatus);
 
-        // 4. 构建商户订单，用于传给支付中心
-        /*MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
+        // ------------------------ 4. 构建商户订单, 用于传给支付中心 ------------------------
+        MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
         merchantOrdersVO.setMerchantOrderId(orderId);
         merchantOrdersVO.setMerchantUserId(submitOrderBO.getUserId());
         merchantOrdersVO.setAmount(actualPayAmout + postAmount);
-        merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());*/
+        merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());
 
 
-        // 5. 构建自定义订单vo
+        // ------------------------ 5. 构建自定义订单vo ------------------------
         OrderVO orderVO = new OrderVO();
         orderVO.setOrderId(orderId);
         // orderVO.setMerchantOrdersVO(merchantOrdersVO);

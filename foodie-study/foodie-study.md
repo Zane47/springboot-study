@@ -8386,9 +8386,7 @@ public class BaseController {
     // 微信支付成功 -> 支付中心 -> 天天吃货平台
     //                       |-> 回调通知的url
     // String payReturnUrl = "http://api.z.mukewang.com/foodie-dev-api/orders/notifyMerchantOrderPaid";
-    String payReturnUrl = "localhost:8088/orders/notifyMerchantOrderPaid?merchantOrderId=2201266YB4XX89D4";
-
-
+    String payReturnUrl = "localhost:8088/orders/notifyMerchantOrderPaid\";
 }
 ```
 
@@ -8402,7 +8400,7 @@ public class BaseController {
 // 微信支付成功 -> 支付中心 -> 天天吃货平台
 //                       |-> 回调通知的url
 // String payReturnUrl = "http://api.z.mukewang.com/foodie-dev-api/orders/notifyMerchantOrderPaid";
-String payReturnUrl = "localhost:8088/orders/notifyMerchantOrderPaid?merchantOrderId=2201266YB4XX89D4";
+String payReturnUrl = "localhost:8088/orders/notifyMerchantOrderPaid";
 ```
 
 微信支付成功 -> 支付中心 -> 天天吃货平台(foodie-study)
@@ -8484,7 +8482,6 @@ public class MerchantOrdersBO {
 @Transactional(propagation=Propagation.REQUIRED)
 @Override
 public boolean createPaymentOrder(MerchantOrdersBO merchantOrdersBO) {
-
     String id = sid.nextShort();
 
     Orders paymentOrder = new Orders();
@@ -8514,9 +8511,42 @@ public boolean createPaymentOrder(MerchantOrdersBO merchantOrdersBO) {
 	public IMOOCJSONResult createMerchantOrder(@RequestBody MerchantOrdersBO merchantOrdersBO, HttpServletRequest request, HttpServletResponse response) throws Exception {}
 ```
 
-那么就要在foodie-study后台中传入MerchantOrdersBO
+那么就要在foodie-study后台中构建并传入MerchantOrdersBO
 
+---
 
+在OrderServiceImpl的createOrder中构建商户订单, 用于传给支付中心 
+
+```java
+@Getter
+@Setter
+@ToString
+public class MerchantOrdersVO {
+    // 商户订单号
+    private String merchantOrderId;
+
+    // 商户方的发起用户的用户主键id
+    private String merchantUserId;
+
+    // 实际支付总金额（包含商户所支付的订单费邮费总额）
+    private Integer amount;
+
+    // 支付方式 1:微信   2:支付宝
+    private Integer payMethod;
+
+    // 支付成功后的回调地址（学生自定义）
+    private String returnUrl;
+}
+```
+
+```java
+// ------------------------ 4. 构建商户订单, 用于传给支付中心 ------------------------
+MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
+merchantOrdersVO.setMerchantOrderId(orderId);
+merchantOrdersVO.setMerchantUserId(submitOrderBO.getUserId());
+merchantOrdersVO.setAmount(actualPayAmout + postAmount);
+merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());
+```
 
 
 
