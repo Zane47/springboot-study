@@ -8740,15 +8740,81 @@ merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());
 
 
 
+## 多环境配置
+
+### springboot配置多环境
+
+applicaiton.yml中配置环境
+
+```yaml
+spring:
+  profiles:
+    active: prod
+```
+
+不同的环境中配置不同的端口和数据库
+
+可以看到运行的时候控制台中:
+
+```
+INFO  Application:679 - The following profiles are active: prod
+```
+
+application-dev.yml
+
+```yaml
+server:
+  port: 8088
+
+spring:
+  datasource:                                           # 数据源的相关配置
+    url: jdbc:mysql://localhost:3306/foodie-shop-dev?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true
+    password: root
+
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+```
+
+application-prod.yml
+
+```yaml
+server:
+  port: 80
+
+spring:
+  datasource:                                           # 数据源的相关配置
+    url: jdbc:mysql://localhost:3306/foodie-shop-dev?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true
+    password: imooc
+```
+
+### 不同环境的配置
+
+profiles 多环境配置梳理：
+1. 数据源配置
+    1.1 url 根据自身情况去修改为 localhost 或者 内网IP（集群或者分布式系统，一定要使用内网IP）
+    1.2 密码改为 你自己的密码
+2. mybatis 日志打印
+    dev  可以打印
+    test 可以打印
+    prod 无需打印
+3. 图片保存目录 和 图片服务请求路径配置
+    /workspaces/images/foodie/faces
+    http://api.z.mukewang.com:8088/foodie-dev-api/foodie/faces
+4. 从支付中心回调天天吃货后端服务的回调地址
+    http://api.z.mukewang.com:8088/foodie-dev-api/orders/notifyMerchantOrderPaid
+
+打包方式：
+1. jar
+    服务化的概念，后续接触springcloud，所有的服务打包都是以jar的形式存在
+2. war
+    应用程序的概念，也可以向外提供服务和接口
 
 
 
+---
 
-
-
-
-
-
+注意这里是dev中配置+原先的配置
 
 
 
