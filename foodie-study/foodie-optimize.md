@@ -8,3 +8,11 @@
 
 
 
+
+
+# 有状态和无状态
+
+https://zhuanlan.zhihu.com/p/268645100
+
+
+
