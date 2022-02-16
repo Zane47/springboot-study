@@ -8632,6 +8632,18 @@ merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());
 
 
 
+
+
+## 处理重复缴费问题
+
+[ref](https://www.zhihu.com/question/36459849/answer/2350105563)
+
+
+
+
+
+
+
 # 定时任务
 
 
@@ -8886,7 +8898,9 @@ profiles 多环境配置梳理：
 
 [Java架构师-技术专家](https://class.imooc.com/javaarchitect#Anchor)后续课程中对该项目的改造, 分布式, 微服务
 
+---
 
+[系统如何处理重复缴费问题](https://www.zhihu.com/question/36459849/answer/2350105563)
 
 
 
