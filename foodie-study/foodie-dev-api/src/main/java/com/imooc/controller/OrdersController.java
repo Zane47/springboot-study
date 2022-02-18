@@ -2,11 +2,13 @@ package com.imooc.controller;
 
 import com.imooc.enums.OrderStatusEnum;
 import com.imooc.enums.PayMethod;
+import com.imooc.pojo.OrderStatus;
 import com.imooc.pojo.bo.SubmitOrderBO;
 import com.imooc.pojo.vo.MerchantOrdersVO;
 import com.imooc.pojo.vo.OrderVO;
 import com.imooc.service.OrderService;
 import com.imooc.utils.CookieUtils;
+import com.imooc.utils.IMOOCJSONResult;
 import com.imooc.utils.JsonResult;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -122,5 +124,17 @@ public class OrdersController extends BaseController {
         return HttpStatus.OK.value();
     }
 
+
+    /**
+     * 查看订单状态orderstatus
+     *
+     * @param orderId
+     * @return
+     */
+    @PostMapping("getPaidOrderInfo")
+    public JsonResult getPaidOrderInfo(String orderId) {
+        OrderStatus orderStatus = orderService.queryOrderStatusInfo(orderId);
+        return JsonResult.ok(orderStatus);
+    }
 
 }

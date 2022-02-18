@@ -69,7 +69,6 @@ public class NotifyController {
 		// 支付成功，商户处理后同步返回给微信参数
 		PrintWriter writer = response.getWriter();
 		if (isPaid) {
-
 			String merchantOrderId = payResult.getOut_trade_no();			// 商户订单号
 			String wxFlowId = payResult.getTransaction_id();
 			Integer paidAmount = payResult.getTotal_fee();
@@ -77,6 +76,7 @@ public class NotifyController {
 //			System.out.println("================================= 支付成功 =================================");
 
 			// ====================== 操作商户自己的业务，比如修改订单状态等 start ==========================
+			// merchantReturnUrl: foodie后端的url
 			String merchantReturnUrl = paymentOrderService.updateOrderPaid(merchantOrderId, paidAmount);
 			// ============================================ 业务结束， end ==================================
 
@@ -87,7 +87,7 @@ public class NotifyController {
 			log.info("*****************************************************************************");
 
 
-			// 通知天天吃货服务端订单已支付
+			// ------------------------ 通知天天吃货服务端订单已支付 ------------------------
 //			String url = "http://192.168.1.2:8088/orders/notifyMerchantOrderPaid";
 
 			MultiValueMap<String, String> requestEntity = new LinkedMultiValueMap<>();
@@ -95,6 +95,7 @@ public class NotifyController {
 			String httpStatus = restTemplate.postForObject(merchantReturnUrl, requestEntity, String.class);
 			log.info("*** 通知天天吃货后返回的状态码 httpStatus: {} ***", httpStatus);
 
+			// ------------------------ 通知微信支付 ------------------------
 			// 通知微信已经收到消息，不要再给我发消息了，否则微信会10连击调用本接口
 			String noticeStr = setXML("SUCCESS", "");
 			writer.write(noticeStr);

@@ -8772,43 +8772,407 @@ url: `localhost:8089/payment/getPaymentCenterOrderInfo?merchantOrderId=2202187RX
 在流程图中对应:
 ![image-20220218110916362](img/foodie-study/image-20220218110916362.png)
 
+查看前台的获取支付二维码逻辑:
+
+```javascript
+getWXPayQRCodeUrl(orderId) {
+    var userInfo = this.userInfo;
+
+    // 发起请求获得微信支付扫描二维码
+    var paymentServerUrl = app.paymentServerUrl;
+    axios.defaults.withCredentials = true;
+    axios.post(
+        paymentServerUrl + '/payment/getWXPayQRCode?merchantUserId=' + userInfo.id + "&merchantOrderId=" + orderId, 
+        {},
+        {
+            headers: {
+                'imoocUserId': "imooc",
+                'password': "imooc"
+            }
+        })
+        .then(res => {
+        if (res.data.status == 200) {
+            var paymentInfo = res.data.data;
+            this.paymentInfo = paymentInfo;
+            // qrCodeUrl
+            // console.log(paymentInfo);
+
+            $('#wxqrcode-display').qrcode({
+                width: 200,
+                height:200,
+                text: paymentInfo.qrCodeUrl
+            });
 
 
+        } else {
+            alert(res.data.msg);
+        }
+    });
+},
+```
 
+传入merchantUserId和merchantOrderId到支付中心foodie-payment, 查看对应的代码
 
+```java
+/**
+	 * @Description: 微信扫码支付页面
+	 */
+//	@GetMapping(value="/getWXPayQRCode")
+@PostMapping(value="/getWXPayQRCode")
+public IMOOCJSONResult getWXPayQRCode(String merchantOrderId, String merchantUserId) throws Exception{
 
+    //		System.out.println(wxPayResource.toString());
 
+    // 根据订单ID和用户ID查询订单详情
+    // WAIT_PAY(10, "未支付"),
+    Orders waitPayOrder = paymentOrderService.queryOrderByStatus(merchantUserId, merchantOrderId, PaymentStatus.WAIT_PAY.type);
 
+    // 商品描述
+    String body = "foodie-付款用户[" + merchantUserId + "]";
+    // 商户订单号
+    String out_trade_no = merchantOrderId;
+    // 从redis中去获得这笔订单的微信支付二维码，如果订单状态没有支付没有就放入，这样的做法防止用户频繁刷新而调用微信接口
+    if (waitPayOrder != null) {
+        String qrCodeUrl = redis.get(wxPayResource.getQrcodeKey() + ":" + merchantOrderId);
+        String qrCodeUrl = null;
 
+        if (StringUtils.isEmpty(qrCodeUrl)) {
+            // 订单总金额，单位为分
+            String total_fee = String.valueOf(waitPayOrder.getAmount());
+            //				String total_fee = "1";	// 测试用 1分钱
 
+            // 统一下单
+            PreOrderResult preOrderResult = wxOrderService.placeOrder(body, out_trade_no, total_fee);
+            qrCodeUrl = preOrderResult.getCode_url();
+        }
 
+        PaymentInfoVO paymentInfoVO = new PaymentInfoVO();
+        paymentInfoVO.setAmount(waitPayOrder.getAmount());
+        paymentInfoVO.setMerchantOrderId(merchantOrderId);
+        paymentInfoVO.setMerchantUserId(merchantUserId);
+        paymentInfoVO.setQrCodeUrl(qrCodeUrl);
+        
+        redis.set(wxPayResource.getQrcodeKey() + ":" + merchantOrderId, qrCodeUrl, wxPayResource.getQrcodeExpire());
 
+        return IMOOCJSONResult.ok(paymentInfoVO);
+    } else {
+        return IMOOCJSONResult.errorMsg("该订单不存在，或已经支付");
+    }
+}
+```
 
+查出未支付的订单, 对未支付的订单请求二维码以支付.
 
+---
 
+```java
+// 商户订单号
+String out_trade_no = merchantOrderId;
+```
 
+这里对应的就是微信官方文档中要求的字段.
+
+[统一下单api](https://pay.weixin.qq.com/wiki/doc/api/native.php?chapter=9_1)
+
+其中的请求参数, 如果是必填的, 就都需要填写.
+
+---
+
+使用redis缓存支付二维码, 二维码有效期是2h, 没有必要每次都去请求.
+
+```properties
+# 微信支付二维码过期时间为 <2小时(微信二维码code_url有效期为2小时)
+wxpay.qrcodeExpire=7000
+```
+
+---
+
+```java
+// 统一下单
+PreOrderResult preOrderResult = wxOrderService.placeOrder(body, out_trade_no, total_fee);
+```
+
+这里统一下单的代码对应就是流程图中的2.调统一下单API()
+
+![image-20220218110916362](img/foodie-study/image-20220218110916362.png)
+
+```java
+/**
+	 * ==========================================
+	 * 微信预付单：指的是在自己的平台需要和微信进行支付交易生成的一个微信订单，称之为“预付单”
+	 * 订单：指的是自己的网站平台与用户之间交易生成的订单
+	 * 
+	 * 1. 用户购买产品 --> 生成网站订单
+	 * 2. 用户支付 --> 网站在微信平台生成预付单
+	 * 3. 最终实际根据预付单的信息进行支付
+	 * ==========================================
+	 */
+@Override
+public PreOrderResult placeOrder(String body, String out_trade_no, String total_fee) throws Exception {
+    // 生成预付单对象
+    PreOrder o = new PreOrder();
+    // 生成随机字符串
+    String nonce_str = UUID.randomUUID().toString().trim().replaceAll("-", "");
+    o.setAppid(wxPayResource.getAppId());
+    o.setBody(body);
+    o.setMch_id(wxPayResource.getMerchantId());
+    o.setNotify_url(wxPayResource.getNotifyUrl());
+    o.setOut_trade_no(out_trade_no);
+    // 判断有没有输入订单总金额，没有输入默认1分钱
+    if (total_fee != null && !total_fee.equals("")) {
+        o.setTotal_fee(Integer.parseInt(total_fee));
+    } else {
+        o.setTotal_fee(1);
+    }
+    o.setNonce_str(nonce_str);
+    o.setTrade_type(wxPayResource.getTradeType());
+    o.setSpbill_create_ip(wxPayResource.getSpbillCreateIp());
+    SortedMap<Object, Object> p = new TreeMap<Object, Object>();
+    p.put("appid", wxPayResource.getAppId());
+    p.put("mch_id", wxPayResource.getMerchantId());
+    p.put("body", body);
+    p.put("nonce_str", nonce_str);
+    p.put("out_trade_no", out_trade_no);
+    p.put("total_fee", total_fee);
+    p.put("spbill_create_ip", wxPayResource.getSpbillCreateIp());
+    p.put("notify_url", wxPayResource.getNotifyUrl());
+    p.put("trade_type", wxPayResource.getTradeType());
+    // 获得签名
+    String sign = Sign.createSign("utf-8", p, wxPayResource.getSecrectKey());
+    o.setSign(sign);
+    // Object转换为XML
+    String xml = XmlUtil.object2Xml(o, PreOrder.class);
+    // 统一下单地址
+    String url = wxPayResource.getPlaceOrderUrl();
+    // 调用微信统一下单地址
+    String returnXml = HttpUtil.sendPost(url, xml);
+
+    // XML转换为Object
+    PreOrderResult preOrderResult = (PreOrderResult) XmlUtil.xml2Object(returnXml, PreOrderResult.class);
+
+    return preOrderResult;
+}
+```
+
+其中微信返回结果是
+
+```java
+package com.imooc.wx.entity;
+
+public class PreOrderResult {
+    private String return_code;				// 返回状态码
+    private String return_msg;				// 返回信息
+    private String appid;					// 公众账号ID
+    private String mch_id;					// 商户号
+    private String device_info;				// 设备号
+    private String nonce_str;				// 随机字符串
+    private String sign;					// 签名
+    private String result_code;				// 业务结果
+    private String err_code;				// 错误代码
+    private String err_code_des;			// 错误代码描述
+    private String trade_type;				// 交易类型
+    private String prepay_id;				// 预支付交易会话标识
+    private String code_url;				// 二维码链接
+}
+```
+
+就要要将其中的返回到前台进行展示
+
+```javascript
+$('#wxqrcode-display').qrcode({
+    width: 200,
+    height:200,
+    text: paymentInfo.qrCodeUrl
+});
+```
+
+需要注意, 这里的appid失效了, 调用微信的支付中心返回FAIL, 所以无法进行支付操作, 但是支付逻辑无误.
 
 ### 支付中心回调通知
 
+<img src="img/foodie-study/image-20220218150051911.png" alt="image-20220218150051911" style="zoom:67%;" />
+
+10 异步通知商户支付结果.
+
+在支付中心中NotifyController处理微信的回调方法为wxpay
+
+微信支付系统调用我们的支付中心的, 在上一节给支付中心payment调用微信统一下单API时候设置的属性
+
+```java
+// 回调地址, 微信通知支付中心
+o.setNotify_url(wxPayResource.getNotifyUrl());
+```
+
+其中的NotifyUrl是
+
+```properties
+# 接收微信支付异步通知回调地址，通知url必须为直接可访问的url，不能携带参数。（需要配置）
+#	public static final String NOTIFY_URL = "http://1s7p978583.iok.la/pay/notice/wxpay.shtml";
+#wxpay.notifyUrl=http://micmcq.natappfree.cc/payment/notice/wxpay
+wxpay.notifyUrl=http://localhost:8089/payment/notice/wxpay
+```
+
+---
+
+具体的逻辑是
+
+```java
+/**
+	 * 支付成功后的微信支付异步通知
+	 */
+@RequestMapping(value="/wxpay")
+public void wxpay(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    log.info("支付成功后的微信支付异步通知");
+
+    // 获取微信支付结果
+    PayResult payResult = wxOrderService.getWxPayResult(request.getInputStream());
+
+    boolean isPaid = payResult.getReturn_code().equals("SUCCESS") ? true : false;
+    // 查询该笔订单在微信那边是否成功支付
+    // 支付成功，商户处理后同步返回给微信参数
+    PrintWriter writer = response.getWriter();
+    if (isPaid) {
+        String merchantOrderId = payResult.getOut_trade_no();			// 商户订单号
+        String wxFlowId = payResult.getTransaction_id();
+        Integer paidAmount = payResult.getTotal_fee();
+
+        //			System.out.println("================================= 支付成功 =================================");
+
+        // ====================== 操作商户自己的业务，比如修改订单状态等 start ==========================
+        String merchantReturnUrl = paymentOrderService.updateOrderPaid(merchantOrderId, paidAmount);
+        // ============================================ 业务结束， end ==================================
+
+        log.info("************* 支付成功(微信支付异步通知) - 时间: {} *************", DateUtil.getCurrentDateString(DateUtil.DATETIME_PATTERN));
+        log.info("* 商户订单号: {}", merchantOrderId);
+        log.info("* 微信订单号: {}", wxFlowId);
+        log.info("* 实际支付金额: {}", paidAmount);
+        log.info("*****************************************************************************");
 
 
+        // 通知天天吃货服务端订单已支付
+        //			String url = "http://192.168.1.2:8088/orders/notifyMerchantOrderPaid";
 
+        MultiValueMap<String, String> requestEntity = new LinkedMultiValueMap<>();
+        requestEntity.add("merchantOrderId", merchantOrderId);
+        String httpStatus = restTemplate.postForObject(merchantReturnUrl, requestEntity, String.class);
+        log.info("*** 通知天天吃货后返回的状态码 httpStatus: {} ***", httpStatus);
 
+        // 通知微信已经收到消息，不要再给我发消息了，否则微信会10连击调用本接口
+        String noticeStr = setXML("SUCCESS", "");
+        writer.write(noticeStr);
+        writer.flush();
 
+    } else {
+        System.out.println("================================= 支付失败 =================================");
 
+        // 支付失败
+        String noticeStr = setXML("FAIL", "");
+        writer.write(noticeStr);
+        writer.flush();
+    }
+}
+```
 
+微信返回支付中心的参数都在request中.
 
-
+处理本地的数据库订单状态 -> 给foodie后台发送通知, 处理对应的订单状态(数据库中的return_url) -> 通知微信支付中心支付成功.
 
 ### 轮询支付成功结果
 
+使用getPaymentCenterOrderInfo查看订单信息. 可以看到如果支付成功了(这里因为appid失效, 都需要手动修改).
+
+`localhost:8089/payment/getPaymentCenterOrderInfo?merchantOrderId=220218ANFN06037C&merchantUserId=220114FBNGX2T9P0`
+
+查看到结果
+
+```json
+{
+    "status": 200,
+    "msg": "OK",
+    "data": {
+        "id": "220218ANFW43D5YW",
+        "merchantOrderId": "220218ANFN06037C",
+        "merchantUserId": "220114FBNGX2T9P0",
+        "amount": 1,
+        "payMethod": 1,
+        "payStatus": 20,
+        "comeFrom": "foodie-study",
+        "returnUrl": "http://localhost:8088/orders/notifyMerchantOrderPaid",
+        "isDelete": 0,
+        "createdTime": "2022-02-18T06:59:20.000+0000"
+    }
+}
+```
+
+其中的payStatus20说明了微信回调支付中心成功, 并修改了支付中心的payStatus. 那么就说明支付中心调用foodie后端出现问题. 
+
+这里需要谨记, localhost都是内网的本地地址, 后续如果发布到服务器上去, 再使用内网地址(192.168.1.100)这类的就无法访问了.
+
+baseController中设置的url
+
+```java
+package com.imooc.controller;
+
+import org.springframework.stereotype.Controller;
+
+@Controller
+public class BaseController {
+    public static final Integer COMMON_PAGE_SIZE = 10;
+    public static final Integer PAGE_SIZE = 20;
 
 
+    // ------------------------ order相关 ------------------------
+    public static final String FOODIE_SHOPCART = "shopcart";
 
 
+    // 支付中心的调用地址
+    // produce
+    // String paymentUrl = "http://payment.t.mukewang.com/foodie-payment/payment/createMerchantOrder";
+    String paymentUrl = "http://localhost:8089/payment/createMerchantOrder";
 
 
+    // 微信支付成功 -> 支付中心 -> 天天吃货平台
+    //                       |-> 回调通知的url
+    // String payReturnUrl = "http://api.z.mukewang.com/foodie-dev-api/orders/notifyMerchantOrderPaid";
+    String payReturnUrl = "http://localhost:8088/orders/notifyMerchantOrderPaid";
+}
+```
 
+所以需要把自己的服务器(电脑)放到公网上, 让微信or支付中心来调用. 现在第三方接口都是这样子对接的. 也就是把payReturnUrl的地址修改为公网地址
+
+### 内网穿透
+
+为什么要是用内网穿透?
+
+这里的项目支付中心也是启动在本地, 但是实际使用的时候, 支付中心也是在服务器上. 微信支付也是第三方服务器, 所以payReturnUrl还是localhost:8088直接传给两者就无法访问到自己计算机上的应用. 那么很容易想到可以自己假设服务器, 但是这样子每次开发之后还要实时传上去重新发布, 麻烦. -> 内网穿透软件.
+
+---
+
+[NATAPP.cn](https://natapp.cn/)
+
+内网穿透的工具, 把本地的电脑发布到服务器上. 把自己电脑的ip映射到外网的其他第三方系统上
+
+其中教程中使用场景有这么一点.
+
+> 3. 微信/支付宝等本地开发.现在微信/支付宝等应用,需要服务器接收微信/支付宝发送的回调信息,然而在本地开发程序的话,还得实时上传到服务器,以便支持微信/支付宝的回调信息,如果使用了natapp内网穿透软件,将回调地址设置成natapp提供的地址,回调数据立即传递回本地, 这样很方便的在本地就可以实时调试程序,无须再不断上传服务器等繁琐且无意义的步骤.
+
+[NATAPP1分钟快速新手图文教程](https://natapp.cn/article/natapp_newbie)
+
+![image-20220218153405631](img/foodie-study/image-20220218153405631.png)
+
+![image-20220218153428784](img/foodie-study/image-20220218153428784.png)
+
+用这里的日志修改BaseController中的payReturnUrl
+
+---
+
+当然这里需要注意的是, 因为没有企业资质(个人的话可以直接放自己的收款码作为urlcode).
+
+所以只能手动进行修改. 需要修改的为:
+
+1. payment支付中心数据库itzixi-pay中表orders字段pay_status由10修改为20(PAID(20, "已支付"),)
+
+2. foodie后端数据库foodie-shop-dev中表order-status字段由修改10为20(WAIT_DELIVER(20, "已付款，待发货"),)
 
 ## 支付宝支付
 
@@ -8856,7 +9220,13 @@ url: `localhost:8089/payment/getPaymentCenterOrderInfo?merchantOrderId=2202187RX
 
 # 定时任务
 
+20状态表示已经付款, 等待发货.
 
+但是数据库表中仍然会有很多10状态, 表示用户未支付.
+
+如果有很多的10, 过一段时间后需要将这些10状态的订单修改为关闭状态. -> 定时任务实现订单超时关闭
+
+springboot提供了task或者job的概念 -> 如何在Springboot中创建定时任务.
 
 ## 构建定时任务
 

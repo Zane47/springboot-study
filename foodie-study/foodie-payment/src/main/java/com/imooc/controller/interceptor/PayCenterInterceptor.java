@@ -32,7 +32,7 @@ public class PayCenterInterceptor implements HandlerInterceptor {
 		String imoocUserId = request.getHeader("imoocUserId");
 		String password = request.getHeader("password");
 
-
+		// fixme: 为了调试方便, 不做校验
 		if (1 == 1) {
 			return true;
 		}

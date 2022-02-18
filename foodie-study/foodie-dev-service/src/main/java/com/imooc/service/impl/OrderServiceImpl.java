@@ -173,4 +173,16 @@ public class OrderServiceImpl implements OrderService {
         record.setPayTime(new Date());
         orderStatusMapper.updateByPrimaryKeySelective(record);
     }
+
+    /**
+     * 查询订单状态
+     *
+     * @param orderId
+     * @return
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public OrderStatus queryOrderStatusInfo(String orderId) {
+        return orderStatusMapper.selectByPrimaryKey(orderId);
+    }
 }

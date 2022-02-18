@@ -34,7 +34,6 @@ public class WxOrderServiceImpl implements WxOrderService {
 	 * 3. 最终实际根据预付单的信息进行支付
 	 * ==========================================
 	 */
-	
 	@Override
 	public PreOrderResult placeOrder(String body, String out_trade_no, String total_fee) throws Exception {
 		// 生成预付单对象
@@ -43,7 +42,9 @@ public class WxOrderServiceImpl implements WxOrderService {
 		String nonce_str = UUID.randomUUID().toString().trim().replaceAll("-", "");
 		o.setAppid(wxPayResource.getAppId());
 		o.setBody(body);
+		// 企业资质的id
 		o.setMch_id(wxPayResource.getMerchantId());
+		// 回调地址, 微信通知支付中心
 		o.setNotify_url(wxPayResource.getNotifyUrl());
 		o.setOut_trade_no(out_trade_no);
 		// 判断有没有输入订单总金额，没有输入默认1分钱
@@ -55,6 +56,8 @@ public class WxOrderServiceImpl implements WxOrderService {
 		o.setNonce_str(nonce_str);
 		o.setTrade_type(wxPayResource.getTradeType());
 		o.setSpbill_create_ip(wxPayResource.getSpbillCreateIp());
+		
+		// ------------------------ 签名 ------------------------
 		SortedMap<Object, Object> p = new TreeMap<Object, Object>();
 		p.put("appid", wxPayResource.getAppId());
 		p.put("mch_id", wxPayResource.getMerchantId());

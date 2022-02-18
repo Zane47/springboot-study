@@ -124,15 +124,19 @@ public class PaymentController {
 //		System.out.println(wxPayResource.toString());
 
 		// 根据订单ID和用户ID查询订单详情
-    	Orders waitPayOrder = paymentOrderService.queryOrderByStatus(merchantUserId, merchantOrderId, PaymentStatus.WAIT_PAY.type);
+		// WAIT_PAY(10, "未支付"),
+    	Orders waitPayOrder = paymentOrderService.queryOrderByStatus(
+				merchantUserId, merchantOrderId, PaymentStatus.WAIT_PAY.type);
 
     	// 商品描述
-		String body = "天天吃货-付款用户[" + merchantUserId + "]";
+		String body = "foodie-付款用户[" + merchantUserId + "]";
 		// 商户订单号
 		String out_trade_no = merchantOrderId;
 		// 从redis中去获得这笔订单的微信支付二维码，如果订单状态没有支付没有就放入，这样的做法防止用户频繁刷新而调用微信接口
 		if (waitPayOrder != null) {
-			String qrCodeUrl = redis.get(wxPayResource.getQrcodeKey() + ":" + merchantOrderId);
+			// todo: 因为服务器还没有做redis, 先直接屏蔽
+			// String qrCodeUrl = redis.get(wxPayResource.getQrcodeKey() + ":" + merchantOrderId);
+			String qrCodeUrl = null;
 
 			if (StringUtils.isEmpty(qrCodeUrl)) {
 				// 订单总金额，单位为分
@@ -150,7 +154,8 @@ public class PaymentController {
 			paymentInfoVO.setMerchantUserId(merchantUserId);
 			paymentInfoVO.setQrCodeUrl(qrCodeUrl);
 
-			redis.set(wxPayResource.getQrcodeKey() + ":" + merchantOrderId, qrCodeUrl, wxPayResource.getQrcodeExpire());
+			// todo: 因为服务器还没有做redis, 先直接屏蔽
+			// redis.set(wxPayResource.getQrcodeKey() + ":" + merchantOrderId, qrCodeUrl, wxPayResource.getQrcodeExpire());
 
 			return IMOOCJSONResult.ok(paymentInfoVO);
 		} else {
