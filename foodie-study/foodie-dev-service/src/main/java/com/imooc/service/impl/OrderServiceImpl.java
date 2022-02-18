@@ -154,11 +154,10 @@ public class OrderServiceImpl implements OrderService {
         merchantOrdersVO.setAmount(actualPayAmout + postAmount);
         merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());
 
-
-        // ------------------------ 5. 构建自定义订单vo ------------------------
+        // ------------------------ 5. 构建自定义订单vo, 给controller使用 ------------------------
         OrderVO orderVO = new OrderVO();
         orderVO.setOrderId(orderId);
-        // orderVO.setMerchantOrdersVO(merchantOrdersVO);
+        orderVO.setMerchantOrdersVO(merchantOrdersVO);
 
         return orderVO;
     }

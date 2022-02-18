@@ -34,8 +34,8 @@ public class OrdersController extends BaseController {
     private OrderService orderService;
 
     // 这里需要手动注入Bean -> config中
-    /*@Autowired
-    private RestTemplate restTemplate;*/
+    @Autowired
+    private RestTemplate restTemplate;
 
 
     /**
@@ -75,34 +75,35 @@ public class OrdersController extends BaseController {
          * 4004
          */
         // todo: 整合redis之后，完善购物车中的已结算商品清除，并且同步到前端的cookie
-        CookieUtils.setCookie(request, response, FOODIE_SHOPCART, "", true);
+        //CookieUtils.setCookie(request, response, FOODIE_SHOPCART, "", true);
 
 
-        // ------------------------ 3. 向支付中心发送当前订单，用于保存支付中心的订单数据 ------------------------
-
-        /*MerchantOrdersVO merchantOrdersVO = orderVO.getMerchantOrdersVO();
+        // ------------------------ 3.向支付中心发送当前订单，用于保存支付中心的订单数据 ------------------------
+        MerchantOrdersVO merchantOrdersVO = orderVO.getMerchantOrdersVO();
 
         merchantOrdersVO.setReturnUrl(payReturnUrl);
 
         // 为了方便测试购买，所以所有的支付金额都统一改为1分钱
         merchantOrdersVO.setAmount(1);
 
-
+        // 3.1 构建http headers
         // 支付中心
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        // 支付中心需要的账户和密码
         headers.add("imoocUserId", "imooc");
         headers.add("password", "imooc");
 
         HttpEntity<MerchantOrdersVO> entity = new HttpEntity<>(merchantOrdersVO, headers);
         ResponseEntity<JsonResult> responseEntity =
-                restTemplate.postForEntity(paymentUrl, entity, JsonResult.class);
+                restTemplate.postForEntity(
+                        paymentUrl, entity, JsonResult.class);
         JsonResult body = responseEntity.getBody();
         if (body.getStatus() != 200) {
             logger.error("发送错误：{}", body.getMsg());
-            return JsonResult.errorMsg("支付中心订单创建失败，请联系管理员！");
+            return JsonResult.errorMsg("支付中心订单创建失败");
         }
-*/
+
 
         return JsonResult.ok(orderId);
     }

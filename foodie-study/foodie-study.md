@@ -8150,15 +8150,7 @@ private RedissonClient redisson;
         }
 ```
 
-到这里, 整合分布式锁就完成了
-
-
-
-
-
-
-
-
+整合分布式锁就完成
 
 # 支付
 
@@ -8381,12 +8373,15 @@ public class BaseController {
 
 
     // 支付中心的调用地址
-    String paymentUrl = "http://payment.t.mukewang.com/foodie-payment/payment/createMerchantOrder";		// produce
+    // produce
+    // String paymentUrl = "http://payment.t.mukewang.com/foodie-payment/payment/createMerchantOrder";
+    String paymentUrl = "http://localhost:8089/payment/createMerchantOrder";
+
 
     // 微信支付成功 -> 支付中心 -> 天天吃货平台
     //                       |-> 回调通知的url
     // String payReturnUrl = "http://api.z.mukewang.com/foodie-dev-api/orders/notifyMerchantOrderPaid";
-    String payReturnUrl = "localhost:8088/orders/notifyMerchantOrderPaid\";
+    String payReturnUrl = "http://localhost:8088/orders/notifyMerchantOrderPaid";
 }
 ```
 
@@ -8508,7 +8503,7 @@ public boolean createPaymentOrder(MerchantOrdersBO merchantOrdersBO) {
 
 ```java
 @PostMapping("/createMerchantOrder")
-	public IMOOCJSONResult createMerchantOrder(@RequestBody MerchantOrdersBO merchantOrdersBO, HttpServletRequest request, HttpServletResponse response) throws Exception {}
+	public IMOOCJSONResult createMerchantOrder(@RequestBody MerchantOrdersBO merchantOrdersBO, HttpServletRequest request, HttpServletResponse response) throws Exception
 ```
 
 那么就要在foodie-study后台中构建并传入MerchantOrdersBO
@@ -8516,6 +8511,17 @@ public boolean createPaymentOrder(MerchantOrdersBO merchantOrdersBO) {
 ---
 
 在OrderServiceImpl的createOrder中构建商户订单, 用于传给支付中心 
+
+```java
+// ------------------------ 4. 构建商户订单, 用于传给支付中心 ------------------------
+MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
+merchantOrdersVO.setMerchantOrderId(orderId);
+merchantOrdersVO.setMerchantUserId(submitOrderBO.getUserId());
+merchantOrdersVO.setAmount(actualPayAmout + postAmount);
+merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());
+```
+
+其中的MerchantOrdersVO就是payment中的MerchantOrdersBO
 
 ```java
 @Getter
@@ -8539,30 +8545,231 @@ public class MerchantOrdersVO {
 }
 ```
 
+然后直接返回OrderVO(orderid和setMerchantOrdersVO的组合)给用户
+
 ```java
-// ------------------------ 4. 构建商户订单, 用于传给支付中心 ------------------------
-MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
-merchantOrdersVO.setMerchantOrderId(orderId);
-merchantOrdersVO.setMerchantUserId(submitOrderBO.getUserId());
-merchantOrdersVO.setAmount(actualPayAmout + postAmount);
-merchantOrdersVO.setPayMethod(submitOrderBO.getPayMethod());
+// ------------------------ 5. 构建自定义订单vo, 给controller使用 ------------------------
+OrderVO orderVO = new OrderVO();
+orderVO.setOrderId(orderId);
+orderVO.setMerchantOrdersVO(merchantOrdersVO);
+```
+
+```java
+@Getter
+@Setter
+@ToString
+public class OrderVO {
+    private String orderId;
+    private MerchantOrdersVO merchantOrdersVO;
+}
+```
+
+在OrderController中setReturnUrl:
+
+```java
+/**
+     * 创建订单
+     * <p>
+     * 1. 创建订单
+     * 2. 创建订单以后，移除购物车中已结算(已提交)的商品
+     * 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+     */
+@ApiOperation(value = "user submit order", notes = "用户下单", httpMethod = "POST")
+@PostMapping("/create")
+public JsonResult createOrder(
+    @ApiParam
+    @RequestBody SubmitOrderBO submitOrderBO,
+    HttpServletRequest request, HttpServletResponse response) {
+    logger.info(submitOrderBO.toString());
+
+    // ------------------------ check ------------------------
+    if (!submitOrderBO.getPayMethod().equals(PayMethod.WECHATPAY.type) &&
+        !submitOrderBO.getPayMethod().equals(PayMethod.ALIPAY.type)) {
+        return JsonResult.errorMsg("wrong pay method");
+    }
+
+    // 1. 创建订单
+    // 2. 创建订单以后，移除购物车中已结算(已提交)的商品
+    // 3. 向支付中心发送当前订单，用于保存支付中心的订单数据
+
+    // ------------------------ 1. 创建订单 ------------------------
+    OrderVO orderVO = orderService.createOrder(submitOrderBO);
+    String orderId = orderVO.getOrderId();
+
+    // ------------------------ 2. 创建订单以后，移除购物车中已结算(已提交)的商品 ------------------------
+    /**
+         * 1001
+         * 2002 -> 用户购买
+         * 3003 -> 用户购买
+         * 4004
+         */
+    // todo: 整合redis之后，完善购物车中的已结算商品清除，并且同步到前端的cookie
+    CookieUtils.setCookie(request, response, FOODIE_SHOPCART, "", true);
+
+    // ------------------------ 3.向支付中心发送当前订单，用于保存支付中心的订单数据 ------------------------
+    MerchantOrdersVO merchantOrdersVO = orderVO.getMerchantOrdersVO();
+
+    merchantOrdersVO.setReturnUrl(payReturnUrl);
+
+    // 为了方便测试购买，所以所有的支付金额都统一改为1分钱
+    merchantOrdersVO.setAmount(1);
+
+    return JsonResult.ok(orderId);
+}
+```
+
+### 向支付中心发送商户订单
+
+#### 请求方法
+
+支付中心也是rest风格
+
+```java
+@PostMapping("/createMerchantOrder")
+public IMOOCJSONResult createMerchantOrder(@RequestBody MerchantOrdersBO merchantOrdersBO, HttpServletRequest request, HttpServletResponse response) throws Exception
+```
+
+所以在foodit-study后端就构建rest请求, 传递merchantOrdersBO对象由payment接收处理.
+
+所以, java使用rest请求调用另外的系统. -> http方式 | spring提供的restTemplate
+
+#### restTemplate注入
+
+spring提供的restTemplate:
+
+```java
+@Autowired
+private RestTemplate restTemplate;
+```
+
+还需要做配置让容器扫描到:
+
+创建配置项WebMvcConfig, 让restTemplate作为Bean让容器扫描到
+
+```java
+package com.imooc.config;
+
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+
+@Configuration
+public class WebMvcConfig {
+    @Bean
+    public RestTemplate restTemplate(RestTemplateBuilder builder) {
+        return builder.build();
+    }
+}
+```
+
+这样子就可以在容器中加入RestTemplate
+
+#### 后端发送请求给payment
+
+OrdersController中的createOrder
+
+```java
+// ------------------------ 3.向支付中心发送当前订单，用于保存支付中心的订单数据 ------------------------
+MerchantOrdersVO merchantOrdersVO = orderVO.getMerchantOrdersVO();
+
+merchantOrdersVO.setReturnUrl(payReturnUrl);
+
+// 为了方便测试购买，所以所有的支付金额都统一改为1分钱
+merchantOrdersVO.setAmount(1);
+
+// 3.1 构建http headers
+// 支付中心
+HttpHeaders headers = new HttpHeaders();
+headers.setContentType(MediaType.APPLICATION_JSON);
+// 支付中心需要的账户和密码
+headers.add("imoocUserId", "imooc");
+headers.add("password", "imooc");
+
+HttpEntity<MerchantOrdersVO> entity = new HttpEntity<>(merchantOrdersVO, headers);
+ResponseEntity<JsonResult> responseEntity =
+    restTemplate.postForEntity(paymentUrl, entity, JsonResult.class);
+JsonResult body = responseEntity.getBody();
+if (body.getStatus() != 200) {
+    logger.error("发送错误：{}", body.getMsg());
+    return JsonResult.errorMsg("支付中心订单创建失败，请联系管理员！");
+}
+```
+
+#### 测试
+
+测试下订单的数据是否插入了数据库itzixi-pay中的表orders中
+
+选择微信支付
+
+![image-20220218101943018](img/foodie-study/image-20220218101943018.png)
+
+提交订单后, 在itzixi-pay中的表orders中查看是否有新的记录
+
+![image-20220218105516747](img/foodie-study/image-20220218105516747.png)
+
+foodie-payment中orders表的merchant_order_id是2202187RX31876CH
+
+foodie-study中orders表的orderid为2202187RX31876CH
+
+两者一致, 测试成功.
+
+同时可以看到returnUrl为`http://localhost:8088/orders/notifyMerchantOrderPaid`
+
+也就是payment通知foodie-study后台的地址, 支付成功之后修改状态
+
+### 提供支付中心商户订单查询
+
+避免查看数据库, payment中使用方法查询支付信息
+
+```java
+/**
+	 * 提供给大家查询的方法，用于查询订单信息
+	 * @param merchantOrderId
+	 * @param merchantUserId
+	 * @return
+	 */
+@PostMapping("getPaymentCenterOrderInfo")
+public IMOOCJSONResult getPaymentCenterOrderInfo(String merchantOrderId, String merchantUserId) {
+
+    if (StringUtils.isBlank(merchantOrderId) || StringUtils.isBlank(merchantUserId)) {
+        return IMOOCJSONResult.errorMsg("查询参数不能为空！");
+    }
+
+    Orders orderInfo = paymentOrderService.queryOrderInfo(merchantUserId, merchantOrderId);
+
+    return IMOOCJSONResult.ok(orderInfo);
+}
+```
+
+postman测试
+
+url: `localhost:8089/payment/getPaymentCenterOrderInfo?merchantOrderId=2202187RX31876CH&merchantUserId=220114FBNGX2T9P0`
+
+返回结果:
+
+```json
+{
+    "status": 200,
+    "msg": "OK",
+    "data": {
+        "id": "2202187S17G93RD4",
+        "merchantOrderId": "2202187RX31876CH",
+        "merchantUserId": "220114FBNGX2T9P0",
+        "amount": 1,
+        "payMethod": 1,
+        "payStatus": 10,
+        "comeFrom": "foodie-study",
+        "returnUrl": "http://localhost:8088/orders/notifyMerchantOrderPaid",
+        "isDelete": 0,
+        "createdTime": "2022-02-18T02:54:46.000+0000"
+    }
+}
 ```
 
 
 
 
-
-
-
-### 向支付中心发送商户订单
-
-
-
-
-
-
-
-### 提供支付中心商户订单查询
 
 
 

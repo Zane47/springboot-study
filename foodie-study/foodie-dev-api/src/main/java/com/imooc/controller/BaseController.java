@@ -15,13 +15,13 @@ public class BaseController {
     // 支付中心的调用地址
     // produce
     // String paymentUrl = "http://payment.t.mukewang.com/foodie-payment/payment/createMerchantOrder";
-    String paymentUrl = "localhost:8089/foodie-payment/payment/createMerchantOrder";
+    String paymentUrl = "http://localhost:8089/payment/createMerchantOrder";
 
 
     // 微信支付成功 -> 支付中心 -> 天天吃货平台
     //                       |-> 回调通知的url
     // String payReturnUrl = "http://api.z.mukewang.com/foodie-dev-api/orders/notifyMerchantOrderPaid";
-    String payReturnUrl = "localhost:8088/orders/notifyMerchantOrderPaid";
+    String payReturnUrl = "http://localhost:8088/orders/notifyMerchantOrderPaid";
 
 
 }
