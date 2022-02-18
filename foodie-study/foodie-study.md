@@ -8767,17 +8767,20 @@ url: `localhost:8089/payment/getPaymentCenterOrderInfo?merchantOrderId=2202187RX
 }
 ```
 
-
-
-
-
-
-
-
-
-
-
 ### 生成支付二维码
+
+在流程图中对应:
+![image-20220218110916362](img/foodie-study/image-20220218110916362.png)
+
+
+
+
+
+
+
+
+
+
 
 
 
