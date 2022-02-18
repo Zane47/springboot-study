@@ -1114,15 +1114,15 @@ saveorder
 
 事务传播行为七种类型: PROPAGATION
 
-| 事务传播类型          | 说明                                                         |
-| --------------------- | ------------------------------------------------------------ |
-| REQUIRED <br />(默认) | 如果当前没有事务, 就新建一个事务, 如果已经存在一个事务中, 加入到这个事务中. |
-| SUPPORTS              | 支持当前事务, 如果当前没有事务, 就以非事务方式执行           |
-| MANDATORY             | 使用当前的事务, 如果当前没有事务, 就抛出异常                 |
-| REQUIRES_NEW          | 新建事务, 如果当前存在事务, 把当前事务挂起                   |
-| NOT_SUPPORTED         | 以非事务方式执行操作, 如果当前存在事务, 就把当前事务挂起     |
-| NEVER                 | 以非事务方式执行, 如果当前存在事务, 则抛出异常. (几乎不用)   |
-| NESTED                | 如果当前存在事务, 则在嵌套事务内执行.<br />如果当前没有事务, 则执行与PROPAGATION REQUIRED类似的操作 |
+| 事务传播类型   | 说明                                                         |
+| -------------- | ------------------------------------------------------------ |
+| REQUIRED(默认) | 如果当前没有事务, 就新建一个事务, 如果已经存在一个事务中, 加入到这个事务中. |
+| SUPPORTS       | 支持当前事务, 如果当前没有事务, 就以非事务方式执行           |
+| MANDATORY      | 使用当前的事务, 如果当前没有事务, 就抛出异常                 |
+| REQUIRES_NEW   | 新建事务, 如果当前存在事务, 把当前事务挂起                   |
+| NOT_SUPPORTED  | 以非事务方式执行操作, 如果当前存在事务, 就把当前事务挂起     |
+| NEVER          | 以非事务方式执行, 如果当前存在事务, 则抛出异常. (几乎不用)   |
+| NESTED         | 如果当前存在事务, 则在嵌套事务内执行.<br />如果当前没有事务, 则执行与PROPAGATION REQUIRED类似的操作 |
 
 ---
 
@@ -9226,47 +9226,146 @@ public class BaseController {
 
 如果有很多的10, 过一段时间后需要将这些10状态的订单修改为关闭状态. -> 定时任务实现订单超时关闭
 
-springboot提供了task或者job的概念 -> 如何在Springboot中创建定时任务.
+springboot提供了task或者job的概念 -> 如何在Springboot中创建定时任务. -> @Scheduled注解
 
 ## 构建定时任务
 
+foodie-study后台中config包下新建OrderJob, 其中添加@Scheduled注解.
 
+查看@Scheduled中的源码, 重点其中的表达式:
 
+```java
+/**
+	 * A cron-like expression, extending the usual UN*X definition to include triggers
+	 * on the second as well as minute, hour, day of month, month and day of week.
+	 * <p>E.g. {@code "0 * * * * MON-FRI"} means once per minute on weekdays
+	 * (at the top of the minute - the 0th second).
+	 * <p>The special value {@link #CRON_DISABLED "-"} indicates a disabled cron trigger,
+	 * primarily meant for externally specified values resolved by a ${...} placeholder.
+	 * @return an expression that can be parsed to a cron schedule
+	 * @see org.springframework.scheduling.support.CronSequenceGenerator
+	 */
+String cron() default "";
+```
 
+cron公式的网站[cron.qqe2](https://cron.qqe2.com/), [新网站](https://qqe2.com/cron)
 
+这里设置20s, print信息来查看
 
+```java
+package com.imooc.config;
 
+import com.imooc.service.OrderService;
+import com.imooc.service.impl.OrderServiceImpl;
+import com.imooc.utils.DateUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
+@Component
+public class OrderJob {
+    // https://qqe2.com/cron
+    @Scheduled(cron = "0/20 * * * * ? ")
+    public void autoCloseOrder() {
+        System.out.println("Scheduled task, now: " + DateUtil.getCurrentDateString(DateUtil.DATETIME_PATTERN));
+    }
+}
+```
+
+还需要在application中开启定时任务@EnableScheduling
+
+```java
+@SpringBootApplication
+// 扫描所有包以及相关组件包, com.imooc是默认的
+@ComponentScan(basePackages = {"com.imooc", "org.n3r.idworker"})
+// 扫描 mybatis 通用 mapper 所在的包
+@MapperScan(basePackages = "com.imooc.mapper")
+// 开启定时任务
+@EnableScheduling
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+```
+
+然后在控制台中可以发现打印:
+
+```
+Scheduled task, now: 2022-02-18 16:05:20
+Scheduled task, now: 2022-02-18 16:05:40
+Scheduled task, now: 2022-02-18 16:06:00
+```
 
 ## 定时关闭超期未支付订单
 
+定时任务101demo使用完毕, 开始写关闭订单的逻辑. 
 
+orderService接口
 
+```java
+/**
+     * 关闭超时未支付订单
+     */
+public void closeOrder();
+```
 
+orderServiceImpl实现
 
+```java
+/**
+     * 关闭超时未支付订单
+     */
+@Transactional(propagation = Propagation.REQUIRED)
+@Override
+public void closeOrder() {
+    // 查询所有未付款订单, 判断时间是否超时(1天), 超时则关闭交易
+    OrderStatus queryOrder = new OrderStatus();
+    queryOrder.setOrderStatus(OrderStatusEnum.WAIT_PAY.type);
+    List<OrderStatus> statusList = orderStatusMapper.select(queryOrder);
+    for (OrderStatus status : statusList) {
+        // 获得订单创建时间
+        Date createdTime = status.getCreatedTime();
+        // 和当前时间进行对比
+        int days = DateUtil.daysBetween(createdTime, new Date());
+        if (days >= 1) {
+            // 超过1天，关闭订单
+            doCloseOrder(status.getOrderId());
+        }
+    }
+}
 
-
-
+// 默认protected
+@Transactional(propagation = Propagation.REQUIRED)
+void doCloseOrder(String orderId) {
+    OrderStatus close = new OrderStatus();
+    close.setOrderId(orderId);
+    close.setOrderStatus(OrderStatusEnum.CLOSE.type);
+    close.setCloseTime(new Date());
+    orderStatusMapper.updateByPrimaryKeySelective(close);
+}
+```
 
 ## 定时任务弊端与优化方案
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+```java
+/**
+     * 使用定时任务关闭超期未支付订单，会存在的弊端：
+     * 1. 会有时间差，程序不严谨
+     *      10:39下单，11:00检查不足1小时，12:00检查，超过1小时多余39分钟
+     * 2. 不支持集群
+     *      单机没毛病，使用集群后，就会有多个定时任务
+     *      解决方案：只使用一台计算机节点，单独用来运行所有的定时任务
+     * 3. 会对数据库全表搜索，及其影响数据库性能：select * from order where orderStatus = 10;
+     * 定时任务，仅仅只适用于小型轻量级项目，传统项目
+     *
+     * 后续课程会涉及到消息队列：MQ-> RabbitMQ, RocketMQ, Kafka, ZeroMQ...
+     *      延时任务（延时队列）
+     *      10:12分下单的，未付款（10）状态，11:12分检查，如果当前状态还是10，则直接关闭订单即可
+     */
+```
 
 # 用户中心
-
-
 
 ## 用户信息
 
