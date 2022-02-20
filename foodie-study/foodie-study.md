@@ -9369,7 +9369,316 @@ void doCloseOrder(String orderId) {
 
 用户个人信息维护, 用户头像上传, 用户收货地址, 用户订单管理, 用户评价管理
 
+前端代码foodie-center.
+
+首先需要将其中app.js中的链接改为本地dev环境
+
+```javascript
+window.app = {
+    /* 开发环境 */
+    serverUrl: "http://localhost:8088",                                   // 接口服务接口地址
+    // paymentServerUrl: "http://192.168.1.3:8089",                            // 支付中心服务地址
+    paymentServerUrl: "http://localhost:8089",
+    shopServerUrl: "http://localhost:8080/foodie-shop/",                  // 门户网站地址
+    centerServerUrl: "http://localhost:8080/foodie-center/",              // 用户中心地址
+    cookieDomain: "",                                                       // cookie 域
+
+    /* 生产环境 */
+    // serverUrl: "http://api.z.mukewang.com:8088/foodie-dev-api",                      // 接口服务接口地址
+    // paymentServerUrl: "http://payment.t.mukewang.com/foodie-payment",       // 支付中心服务地址
+    // shopServerUrl: "http://shop.z.mukewang.com:8080/foodie-shop/",                            // 门户网站地址
+    // centerServerUrl: "http://center.z.mukewang.com:8080/foodie-center/",                        // 用户中心地址
+    // cookieDomain: ".z.mukewang.com;",  
+}
+
+```
+
 ## 用户信息
+
+### 获取用户信息
+
+![image-20220220091459436](img/foodie-study/image-20220220091459436.png)
+
+前端代码:
+
+```html
+<li class="person">
+    <a href="#">个人资料</a>
+    <ul>
+        <li> <a href="userinfo.html">我的信息</a></li>
+        <!-- <li> <a href="safety.html">安全设置</a></li> -->
+        <li> <a href="address.html">收货地址</a></li>
+    </ul>
+</li>
+```
+
+查看userinfo.html中获取用户信息的代码
+
+```javascript
+renderUserInfo() {
+    var userInfo = this.userInfo;
+    // console.log(userInfo);
+    // 请求后端获得最新数据
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.get(
+        serverUrl + '/center/userInfo?userId=' + userInfo.id, 
+        {
+            headers: {
+                'headerUserId': userInfo.id,
+                'headerUserToken': userInfo.userUniqueToken
+            }
+        })
+        .then(res => {
+        if (res.data.status == 200) {
+            var userInfoMore = res.data.data;
+            // console.log(userInfoMore);
+            this.userInfoMore = userInfoMore;
+
+            var datepicker = moment(userInfoMore.birthday).format('YYYY-MM-DD');
+            $("#datepicker").attr("value", datepicker);
+        } else {
+            alert(res.data.msg);
+            console.log(res.data.msg);
+        }
+    });
+},
+```
+
+get请求后端, 参数为userId
+
+---
+
+后台中, 查询用户信息接口
+
+```java
+@Api(value = "user center", tags = {"用户中心展示的相关接口"})
+@RestController
+@RequestMapping("center")
+public class CenterController {
+    @ApiOperation(value = "get user info", notes = "get user info", httpMethod = "GET")
+    @GetMapping("/userInfo")
+    public JsonResult getUserInfo(
+        @ApiParam(name = "user id", value = "userId", required = true)
+        @RequestParam String userId) {
+        return JsonResult.ok();
+    }
+}
+```
+
+Service层
+
+```java
+package com.imooc.service;
+
+import com.imooc.pojo.Users;
+
+public interface CenterUserService {
+
+    /**
+     * 根据userId查询user信息
+     *
+     * @param userId
+     * @return
+     */
+    public Users queryUserInfoById(String userId);
+}
+```
+
+impl
+
+```java
+@Service
+public class CenterUserServiceImpl implements CenterUserService {
+
+    @Autowired
+    private UsersMapper usersMapper;
+
+    /**
+     * 根据userId查询User信息
+     *
+     * @param userId
+     * @return
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public Users queryUserInfoById(String userId) {
+        return usersMapper.selectByPrimaryKey(userId);
+    }
+}
+```
+
+api层
+
+```java
+@Api(value = "user center", tags = {"用户中心展示的相关接口"})
+@RestController
+@RequestMapping("center")
+public class CenterController {
+
+    @Autowired
+    private CenterUserService centerUserService;
+
+    @ApiOperation(value = "get user info", notes = "get user info", httpMethod = "GET")
+    @GetMapping("/userInfo")
+    public JsonResult getUserInfo(
+        @ApiParam(name = "user id", value = "userId", required = true)
+        @RequestParam String userId) {
+        Users users = centerUserService.queryUserInfoById(userId);
+        users.setPassword(null);
+
+        return JsonResult.ok(users);
+    }
+}
+```
+
+可以看到返回前台的数据
+
+```json
+{
+	"status": 200,
+	"msg": "OK",
+	"data": {
+		"id": "220114FBNGX2T9P0",
+		"username": "imooc22",
+		"password": "4QrcOUm6Wau+VuBX8g+IPg==",
+		"nickname": "imooc22",
+		"realname": null,
+		"face": "http://122.152.205.72:88/group1/M00/00/05/CpoxxFw_8_qAIlFXAAAcIhVPdSg994.png",
+		"mobile": null,
+		"email": null,
+		"sex": 2,
+		"birthday": "1899-12-31T16:00:00.000+0000",
+		"createdTime": "2022-01-14T12:12:06.000+0000",
+		"updatedTime": "2022-01-14T12:12:06.000+0000"
+	}
+}
+```
+
+看到密码也返回来了, 需要脱敏, 直接设置为null;
+
+<img src="img/foodie-study/image-20220220095600504.png" alt="image-20220220095600504" style="zoom:50%;" />
+
+### 修改用户信息
+
+![image-20220220095738132](img/foodie-study/image-20220220095738132.png)
+
+点击保存修改按钮, 将信息保存到db中
+
+前端保存的逻辑
+
+```html
+<div class="info-btn">
+    <div class="am-btn am-btn-danger" @click="saveUserInfo">保存修改</div>
+</div>
+```
+
+```javascript
+saveUserInfo() {
+    var userInfoMore = this.userInfoMore;
+
+    var nickname = userInfoMore.nickname;
+    if (nickname == null || nickname == "" || nickname == undefined) {
+        alert("昵称不能为空");
+        return;
+    }
+    if (nickname.length > 12) {
+        alert("昵称长度不能超过12位");
+        return;
+    }
+
+    var realname = userInfoMore.realname;
+    if (realname != null && realname != "" && realname != undefined) {
+        if (realname.length > 12) {
+            alert("真实姓名长度不能超过12位");
+            return;
+        }
+    }
+
+    var mobile = userInfoMore.mobile;
+    if (mobile != null && mobile != "" && mobile != undefined) {
+        if (mobile.length != 11) {
+            alert("手机号长度为11位");
+            return;
+        }
+        var checkMobile = app.checkMobile(mobile);
+        if (!checkMobile) {
+            alert('请输入有效的手机号码！');
+            return;
+        }
+    }
+
+    var email = userInfoMore.email;
+    if (email != null && email != "" && email != undefined) {
+        var checkEmail = app.checkEmail(email);
+        if (!checkEmail) {
+            alert('请输入有效的邮箱地址！');
+            return;
+        }
+    }
+
+
+    // console.log(this.userInfoMore);
+    var birthday = $("#datepicker").val();
+    userInfoMore.birthday = birthday;
+    // console.log(userInfoMore);
+
+    var userInfo = this.userInfo;
+    // console.log(userInfo);
+    // 请求后端获得最新数据
+    var serverUrl = app.serverUrl;
+    axios.defaults.withCredentials = true;
+    axios.post(
+        serverUrl + '/userInfo/update?userId=' + userInfo.id, 
+        userInfoMore, 
+        {
+            headers: {
+                'headerUserId': userInfo.id,
+                'headerUserToken': userInfo.userUniqueToken
+            }
+        })
+        .then(res => {
+        if (res.data.status == 200) {
+            // var userInfoMore = res.data.data;
+            // console.log(userInfoMore);
+            alert("用户信息修改成功!");
+
+            window.location.reload();
+        } else {
+            alert(res.data.msg);
+            console.log(res.data.msg);
+        }
+    });
+},
+```
+
+post请求发送到后端, 其中的userInfoMore是在一开始查询的时候后端返回查到的数据
+
+```javascript
+var userInfoMore = res.data.data;
+```
+
+后台中根据前端页面显示的内容构建
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 使用Hibernate验证用户信息
+
+
+
+
+
+
 
 
 
