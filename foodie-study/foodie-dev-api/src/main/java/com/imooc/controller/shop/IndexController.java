@@ -1,7 +1,6 @@
-package com.imooc.controller;
+package com.imooc.controller.shop;
 
 
-import com.imooc.aspect.ServiceLogAspect;
 import com.imooc.enums.YesOrNo;
 import com.imooc.pojo.Carousel;
 import com.imooc.pojo.Category;

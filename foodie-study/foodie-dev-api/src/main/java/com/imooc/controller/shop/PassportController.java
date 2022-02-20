@@ -1,4 +1,4 @@
-package com.imooc.controller;
+package com.imooc.controller.shop;
 
 import com.imooc.pojo.Users;
 import com.imooc.pojo.bo.UserBO;

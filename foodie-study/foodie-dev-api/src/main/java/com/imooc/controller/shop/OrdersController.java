@@ -1,4 +1,4 @@
-package com.imooc.controller;
+package com.imooc.controller.shop;
 
 import com.imooc.enums.OrderStatusEnum;
 import com.imooc.enums.PayMethod;
@@ -7,8 +7,6 @@ import com.imooc.pojo.bo.SubmitOrderBO;
 import com.imooc.pojo.vo.MerchantOrdersVO;
 import com.imooc.pojo.vo.OrderVO;
 import com.imooc.service.OrderService;
-import com.imooc.utils.CookieUtils;
-import com.imooc.utils.IMOOCJSONResult;
 import com.imooc.utils.JsonResult;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;

@@ -1,4 +1,4 @@
-package com.imooc.controller;
+package com.imooc.controller.shop;
 
 import com.imooc.service.StuService;
 import org.springframework.beans.factory.annotation.Autowired;

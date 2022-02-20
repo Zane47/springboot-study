@@ -1,4 +1,4 @@
-package com.imooc.controller;
+package com.imooc.controller.shop;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
