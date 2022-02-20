@@ -9660,7 +9660,30 @@ var userInfoMore = res.data.data;
 
 后台中根据前端页面显示的内容构建
 
+---
 
+新增CenterUserController
+
+```java
+@Api(value = "用户信息接口", tags = {"用户信息相关接口"})
+@RestController
+@RequestMapping("userInfo")
+public class CenterUserController {
+
+    /**
+     * center更新用户信息
+     *
+     * @return
+     */
+    @ApiOperation(value = "updateUserInfo", notes = "updateUserInfo", httpMethod = "POST")
+    @PostMapping("update")
+    public JsonResult updateUserInfo(
+            @ApiParam(name = "userId", value = "用户id", required = true)
+            @RequestParam String userId) {
+        return JsonResult.ok();
+    }
+}
+```
 
 
 
