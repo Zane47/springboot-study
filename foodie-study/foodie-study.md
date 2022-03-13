@@ -110,7 +110,7 @@ entity
 
 让pojo依赖common, foodie-dev-pojo中的pom文件中添加依赖
 
-```hxml
+```html
 <dependencies>
     <dependency>
         <groupId>org.example</groupId>
@@ -2724,7 +2724,7 @@ public Object hello() {
 
 ```
 INFO  HelloController:23 - hello
-WARN  HelloController:25 - hello
+WARN  HelloController:25 - hell
 ERROR HelloController:26 - hello
 ```
 
@@ -9665,29 +9665,79 @@ var userInfoMore = res.data.data;
 新增CenterUserController
 
 ```java
-@Api(value = "用户信息接口", tags = {"用户信息相关接口"})
-@RestController
-@RequestMapping("userInfo")
-public class CenterUserController {
-
-    /**
+/**
      * center更新用户信息
      *
      * @return
      */
-    @ApiOperation(value = "updateUserInfo", notes = "updateUserInfo", httpMethod = "POST")
-    @PostMapping("update")
-    public JsonResult updateUserInfo(
-            @ApiParam(name = "userId", value = "用户id", required = true)
-            @RequestParam String userId) {
-        return JsonResult.ok();
-    }
+@ApiOperation(value = "updateUserInfo", notes = "updateUserInfo", httpMethod = "POST")
+@PostMapping("update")
+public JsonResult updateUserInfo(
+    @ApiParam(name = "userId", value = "用户id", required = true)
+    @RequestParam String userId,
+    @RequestBody CenterUserBO centerUserBO,
+    HttpServletRequest request, HttpServletResponse response) {
+
+    System.out.println(centerUserBO);
+
+    // 更新后的用户信息
+    Users userResult = centerUserService.updateUserInfo(userId, centerUserBO);
+
+    // ------------------------ 设置cookie ------------------------
+    setNullProperty(userResult);
+
+    // 前台刷新先从cookie中先读取
+    CookieUtils.setCookie(request, response, "user", JsonUtils.objectToJson(userResult), true);
+
+    // todo: 后续要改，，会整合进redis，分布式会话, 增加令牌token
+
+    return JsonResult.ok();
 }
 ```
 
+接口
 
+```java
+public interface CenterUserService {
 
+    /**
+     * 根据userId查询user信息
+     *
+     * @param userId
+     * @return
+     */
+    public Users queryUserInfoById(String userId);
 
+    /**
+     * 修改用户信息
+     */
+    public Users updateUserInfo(String userId, CenterUserBO centerUserBO);
+}
+```
+
+impl
+
+```java
+/**
+     * 修改用户信息
+     *
+     * @param userId
+     * @param centerUserBO
+     */
+@Transactional(propagation = Propagation.REQUIRED)
+@Override
+public Users updateUserInfo(String userId, CenterUserBO centerUserBO) {
+    Users updateUser = new Users();
+    BeanUtils.copyProperties(centerUserBO, updateUser);
+    Optional.ofNullable(userId).ifPresent(updateUser::setId);
+    updateUser.setUpdatedTime(new Date());
+    usersMapper.updateByPrimaryKeySelective(updateUser);
+
+    return queryUserInfoById(userId);
+}
+```
+
+前台修改数据后可以看到在数据库中修改成功, 同时setcookie, 刷新页面会从cookie中取数据查看是否已登录
 
 
 

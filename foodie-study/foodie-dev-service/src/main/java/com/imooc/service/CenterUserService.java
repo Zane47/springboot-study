@@ -14,7 +14,7 @@ public interface CenterUserService {
     public Users queryUserInfoById(String userId);
 
     /**
-     *
+     * 修改用户信息
      */
-    public void updateUserInfo(String userId, CenterUserBO centerUserBO);
+    public Users updateUserInfo(String userId, CenterUserBO centerUserBO);
 }
