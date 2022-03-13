@@ -9739,27 +9739,115 @@ public Users updateUserInfo(String userId, CenterUserBO centerUserBO) {
 
 前台修改数据后可以看到在数据库中修改成功, 同时setcookie, 刷新页面会从cookie中取数据查看是否已登录
 
-
-
-
-
-
-
 ### 使用Hibernate验证用户信息
 
+前端有验证, 后端也需要验证信息. 
 
+首先可以在api层将请求参数centerUserBO进行校验 -> 但是在这里不好, 因为属性太多了, 一个个做判断代码量会很大, 重复代码. -> 使用Hibernate的验证器
 
+```java
+public JsonResult updateUserInfo(
+    @ApiParam(name = "userId", value = "用户id", required = true)
+    @RequestParam String userId,
+    @RequestBody CenterUserBO centerUserBO,
+    HttpServletRequest request, HttpServletResponse response) {}
+```
 
+在依赖中可以找到hibernate.validator
 
+![image-20220313154759337](img/foodie-study/image-20220313154759337.png)
 
+在根pom中查看hibernate-validator的依赖模块
 
+![image-20220313155104956](img/foodie-study/image-20220313155104956.png)
 
+可以看到其依赖的是spring-boot-starter-web, 所以在项目中可以使用hibernate-validator的校验规则
 
+---
 
+使用方法:
 
+进入到需要校验的BO中, 对需要校验的属性添加注解. (@NotBlank, @Length, @Pattern, @Email, @Min, @Max)
 
+```java
+@Getter
+@Setter
+@ToString
+@ApiModel(value="CenterUserBO", description="form client，由用户传入的数据封装在此entity中")
+public class CenterUserBO {
+    @NotBlank(message = "用户昵称不能为空")
+    @Length(max = 12, message = "用户昵称不能超过12位")
+    @ApiModelProperty(value="用户昵称", name="nickname", example="杰森", required = false)
+    private String nickname;
+
+    @Length(max = 12, message = "用户真实姓名不能超过12位")
+    @ApiModelProperty(value="真实姓名", name="realname", example="杰森", required = false)
+    private String realname;
+
+    @Pattern(regexp = "^(((13[0-9]{1})|(15[0-9]{1})|(18[0-9]{1}))+\\d{8})$", message = "手机号格式不正确")
+    @ApiModelProperty(value="手机号", name="mobile", example="13999999999", required = false)
+    private String mobile;
+
+    @Email
+    @ApiModelProperty(value="邮箱地址", name="email", example="imooc@imooc.com", required = false)
+    private String email;
+
+    @Min(value = 0, message = "性别选择不正确")
+    @Max(value = 2, message = "性别选择不正确")
+    @ApiModelProperty(value="性别", name="sex", example="0:女 1:男 2:保密", required = false)
+    private Integer sex;
+}
+
+```
+
+还需要在controller中添加注解@Valid, 获取错误信息bindingResult
+
+```java
+public JsonResult updateUserInfo(
+    @ApiParam(name = "userId", value = "用户id", required = true)
+    @RequestParam String userId,
+    @RequestBody @Valid CenterUserBO centerUserBO,
+    BindingResult bindingResult,
+    HttpServletRequest request, HttpServletResponse response) {
+    // ------------------------ 校验 ------------------------
+    // 判断BindingResult是否保存错误的验证信息，如果有，则直接return
+    if (bindingResult.hasErrors()) {
+        Map<String, String> errors = getErrors(bindingResult);
+        return JsonResult.errorMap(errors);
+    }
+}
+
+/**
+     * 错误处理
+     *
+     * @param bindingResult
+     * @return
+     */
+private Map<String, String> getErrors(BindingResult bindingResult) {
+    Map<String, String> map = new HashMap<>();
+    List<FieldError> fieldErrors = bindingResult.getFieldErrors();
+    for (FieldError error : fieldErrors) {
+        String field = error.getField();
+        String message = error.getDefaultMessage();
+        map.put(field, message);
+    }
+    return map;
+}
+```
+
+可以直接使用postman测试, 入参为{}.
 
 ## 用户头像
+
+
+
+
+
+
+
+
+
+
 
 
 

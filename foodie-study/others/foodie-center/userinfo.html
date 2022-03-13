@@ -75,7 +75,7 @@
 									<div class="am-form-group">
 										<label for="user-name" class="am-form-label">真实姓名</label>
 										<div class="am-form-content">
-											<input type="text" v-model="userInfoMore.realname" placeholder="name" maxlength="12">
+											<input type="text" v-model="userInfoMore.realname" placeholder="name" maxlength="14">
 										</div>
 									</div>
 
@@ -266,12 +266,13 @@
 						}
 
 						var realname = userInfoMore.realname;
+						/**
 						if (realname != null && realname != "" && realname != undefined) {
 							if (realname.length > 12) {
 								alert("真实姓名长度不能超过12位");
 								return;
 							}
-						}
+						}*/
 
 						var mobile = userInfoMore.mobile;
 						if (mobile != null && mobile != "" && mobile != undefined) {
