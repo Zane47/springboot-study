@@ -9899,6 +9899,26 @@ private Map<String, String> getErrors(BindingResult bindingResult) {
 
 # 云服务部署
 
+jdk, tomcat, MariaDB.
+
+打包Springboot项目, jar包和war包
+
+部署第二台tomcat发布前端项目 -> 后续使用nginx
+
+linux系统基础.
+
+内网互通, 多台服务器互通. 多台服务器机器(结点), 需要做到内网互通, 内网IP, 互相可以ping通
+
+---
+
+公网网关: 外部请求都会请求到nginx, 网站其他的结点是内网互通的, 如果要访问访问外网, 就需要通过现有开放的公网网关让某个结点访问外网的信息.例如下图中的RabbitMQ要做更新, 但是无法访问外网, 就需要使用nginx主来作为公网网关进行网络访问.
+
+![pic](img/foodie-study/pic.png)
+
+
+
+
+
 
 
 
