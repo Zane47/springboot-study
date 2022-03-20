@@ -40,4 +40,16 @@ public class HelloController {
         return "setSession ok";
     }
 
+    /**
+     * forest
+     *
+     * @param userName
+     * @return
+     */
+    @GetMapping("/requestWithParam")
+    public String requestWithParam(@RequestParam("uname") String userName) {
+        System.out.println(userName);
+        return userName;
+    }
+
 }
