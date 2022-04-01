@@ -11,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 
@@ -36,7 +37,7 @@ public class AddressController {
      */
     @ApiOperation(value = "queryAddressByUserId", notes = "根据用户id查询收货地址列表", httpMethod = "POST")
     @PostMapping("/list")
-    public JsonResult list(@RequestParam String userId) {
+    public JsonResult list(HttpServletRequest request, @RequestParam String userId) {
         if (StringUtils.isBlank(userId)) {
             return JsonResult.errorMsg("wrong user id");
         }
@@ -63,7 +64,7 @@ public class AddressController {
         // ------------------------ 新增地址 ------------------------
         addressService.addNewUserAddress(addressBO);
 
-        return JsonResult.ok();
+        return JsonResult.ok("add success");
     }
 
 

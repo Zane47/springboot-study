@@ -16,7 +16,7 @@ public class HelloController {
     private final static Logger logger = LoggerFactory.getLogger(HelloController.class);
 
     @GetMapping("/hello")
-    public Object hello() {
+    public Object hello(HttpServletRequest request) {
 
         logger.info("hello");
         logger.debug("hello");
@@ -47,9 +47,22 @@ public class HelloController {
      * @return
      */
     @GetMapping("/requestWithParam")
-    public String requestWithParam(@RequestParam("uname") String userName) {
+    public String requestWithParam(HttpServletRequest request, @RequestParam("uname") String userName) {
         System.out.println(userName);
         return userName;
     }
+
+    /**
+     * post test
+     *
+     * @return
+     */
+    @PostMapping("/posthello")
+    public String postHello() {
+        System.out.println("posthello");
+        return "hello, 8088 post";
+    }
+
+
 
 }

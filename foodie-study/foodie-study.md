@@ -16,7 +16,7 @@
 
 Struts: MVC框架, 老项目中使用. 
 
-* 有安全漏洞, 
+* 有安全漏洞, inspection
 * 请求变量共享(线程安全问题), 
 * Filter拦截类拦截. SpringMVC和Springboot是基于AOP的filter
 * 非Spring官方
