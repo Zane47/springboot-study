@@ -58,7 +58,7 @@ public class HelloController {
      * @return
      */
     @PostMapping("/posthello")
-    public String postHello() {
+    public String postHello(HttpServletRequest request) {
         System.out.println("posthello");
         return "hello, 8088 post";
     }
