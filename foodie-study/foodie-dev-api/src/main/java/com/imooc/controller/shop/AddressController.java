@@ -2,6 +2,7 @@ package com.imooc.controller.shop;
 
 import com.imooc.pojo.UserAddress;
 import com.imooc.pojo.bo.AddressBO;
+import com.imooc.pojo.bo.AddressBOXml;
 import com.imooc.service.AddressService;
 import com.imooc.utils.JsonResult;
 import com.imooc.utils.MobileEmailUtils;
@@ -9,6 +10,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -65,6 +67,20 @@ public class AddressController {
         addressService.addNewUserAddress(addressBO);
 
         return JsonResult.ok("add success");
+    }
+
+    /**
+     * add address, xml type
+     *
+     * @param request
+     * @param addressBOXml
+     * @return
+     */
+    @PostMapping(value = "/addxml", consumes = {MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_XML_VALUE})
+    public String addNewAddressXml(HttpServletRequest request, @RequestBody AddressBOXml addressBOXml) {
+        addressService.addNewUserAddressXml(addressBOXml);
+
+        return "addNewAddressXml";
     }
 
 
@@ -148,9 +164,9 @@ public class AddressController {
 
 
         if (StringUtils.isBlank(addressBO.getProvince()) ||
-                StringUtils.isBlank(addressBO.getCity()) ||
-                StringUtils.isBlank(addressBO.getDistrict()) ||
-                StringUtils.isBlank(addressBO.getDetail())) {
+            StringUtils.isBlank(addressBO.getCity()) ||
+            StringUtils.isBlank(addressBO.getDistrict()) ||
+            StringUtils.isBlank(addressBO.getDetail())) {
             return JsonResult.errorMsg("收货地址信息不能为空");
         }
 

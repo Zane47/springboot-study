@@ -2,6 +2,8 @@ package com.imooc.service;
 
 import com.imooc.pojo.UserAddress;
 import com.imooc.pojo.bo.AddressBO;
+import com.imooc.pojo.bo.AddressBOXml;
+
 import java.util.List;
 
 public interface AddressService {
@@ -16,6 +18,13 @@ public interface AddressService {
      * 新增地址
      */
     public void addNewUserAddress(AddressBO addressBO);
+
+    /**
+     * 新增地址XML
+     *
+     * @param addressBO
+     */
+    public void addNewUserAddressXml(AddressBOXml addressBO);
 
     /**
      * update address

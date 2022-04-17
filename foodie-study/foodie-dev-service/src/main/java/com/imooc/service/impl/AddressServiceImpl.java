@@ -4,6 +4,7 @@ import com.imooc.enums.YesOrNo;
 import com.imooc.mapper.UserAddressMapper;
 import com.imooc.pojo.UserAddress;
 import com.imooc.pojo.bo.AddressBO;
+import com.imooc.pojo.bo.AddressBOXml;
 import com.imooc.service.AddressService;
 import org.n3r.idworker.Sid;
 import org.springframework.beans.BeanUtils;
@@ -64,6 +65,32 @@ public class AddressServiceImpl implements AddressService {
         userAddressMapper.insert(newAddress);
     }
 
+
+    /**
+     * 新增用户地址xml
+     */
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void addNewUserAddressXml(AddressBOXml addressBO) {
+        // 1.如果当前用户不存在地址, 那么新增的则为'默认地址'
+        int isDefault = YesOrNo.NO.type;
+        List<UserAddress> userAddressList = this.queryAll(addressBO.getUserId());
+        if (userAddressList == null || userAddressList.isEmpty()) {
+            isDefault = YesOrNo.YES.type;
+        }
+        String addressId = sid.nextShort();
+
+        // 2. 保存地址到数据库
+        UserAddress newAddress = new UserAddress();
+        BeanUtils.copyProperties(addressBO, newAddress);
+
+        newAddress.setId(addressId);
+        newAddress.setIsDefault(isDefault);
+        newAddress.setCreatedTime(new Date());
+        newAddress.setUpdatedTime(new Date());
+
+        userAddressMapper.insert(newAddress);
+    }
 
     /**
      * update address
