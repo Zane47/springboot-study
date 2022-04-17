@@ -1,7 +1,10 @@
 package com.imooc.controller;
 
+import com.imooc.forest.ForestWebUtils;
+import com.imooc.forest.entity.ForestReqParamEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
@@ -14,6 +17,9 @@ import javax.servlet.http.HttpSession;
 public class HelloController {
 
     private final static Logger logger = LoggerFactory.getLogger(HelloController.class);
+
+    @Autowired
+    private ForestWebUtils forestWebUtils;
 
     @GetMapping("/hello")
     public Object hello(HttpServletRequest request) {
@@ -63,6 +69,17 @@ public class HelloController {
         return "hello, 8088 post";
     }
 
+    /**
+     * forest test
+     */
+    @GetMapping("/forest")
+    public void helloForest() {
+        ForestReqParamEntity entity = new ForestReqParamEntity();
+        entity.setHttpUrl("http://localhost:8088/hello/posthello");
+        entity.setType("post");
+        String result = forestWebUtils.httpRequest(null, entity, String.class);
+        System.out.println(result);
+    }
 
 
 }

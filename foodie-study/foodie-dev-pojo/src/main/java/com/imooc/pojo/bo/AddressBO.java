@@ -17,4 +17,6 @@ public class AddressBO {
     private String city;
     private String district;
     private String detail;
+
+    private UserBO userBO;
 }

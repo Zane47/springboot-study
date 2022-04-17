@@ -53,7 +53,7 @@ public class AddressController {
      */
     @ApiOperation(value = "addNewAddress", notes = "用户新增地址", httpMethod = "POST")
     @PostMapping("/add")
-    public JsonResult addNewAddress(@RequestBody AddressBO addressBO) {
+    public JsonResult addNewAddress(HttpServletRequest request, @RequestBody AddressBO addressBO) {
         // ------------------------ 校验前台传来的信息 ------------------------
         JsonResult checkResult = checkAddress(addressBO);
         if (checkResult.getStatus() != 200) {
