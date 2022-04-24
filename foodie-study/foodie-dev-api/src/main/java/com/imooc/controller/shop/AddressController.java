@@ -77,7 +77,8 @@ public class AddressController {
      * @return
      */
     @PostMapping(value = "/addxml", consumes = {MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_XML_VALUE})
-    public String addNewAddressXml(HttpServletRequest request, @RequestBody AddressBOXml addressBOXml) {
+    public String addNewAddressXml(HttpServletRequest request,
+                                   @RequestBody AddressBOXml addressBOXml) {
         addressService.addNewUserAddressXml(addressBOXml);
 
         return "addNewAddressXml";
